@@ -4374,8 +4374,8 @@
         font-size: 13px;
         color: var(--acc);
         white-space: nowrap;
-        min-width: 0;
         flex-shrink: 1;
+        min-width: 0;
       }
       .logo em {
         color: var(--text);
@@ -4421,7 +4421,7 @@
         flex-shrink: 0;
         margin-left: auto;
       }
-      .sel {
+      .sel-try {
         border: 1px solid var(--bdr2);
         border-radius: var(--rs);
         background: var(--surf);
@@ -4439,7 +4439,6 @@
         color: var(--text);
         font-size: 12px;
         cursor: pointer;
-        transition: background 0.12s;
         white-space: nowrap;
         line-height: 1.4;
         flex-shrink: 0;
@@ -4499,7 +4498,7 @@
         width: 100%;
       }
 
-      /* Progress bar */
+      /* Progress */
       .prog-wrap {
         margin-bottom: 10px;
       }
@@ -4522,7 +4521,7 @@
         transition: width 0.3s;
       }
 
-      /* Nav bar */
+      /* Nav bar: Prev | stats | Next */
       .nav-bar {
         display: grid;
         grid-template-columns: 1fr auto 1fr;
@@ -4575,7 +4574,6 @@
         font-size: 13px;
         font-weight: 600;
         cursor: pointer;
-        transition: background 0.12s;
         white-space: nowrap;
       }
       .btn-nav:hover:not(:disabled) {
@@ -4589,6 +4587,8 @@
         background: var(--acc);
         color: #000;
         border-color: var(--acc);
+        padding: 8px 18px;
+        font-size: 14px;
         box-shadow: 0 2px 8px rgba(224, 123, 0, 0.35);
       }
       .btn-nav-next:hover:not(:disabled) {
@@ -4649,54 +4649,43 @@
         margin-bottom: 16px;
       }
 
-      /* ─────────────────────────────────────────────────────────────────────────
-   THE FIX: circle is position:absolute, floats over the left padding slot.
-   The text div gets 100% of the content area (after padding).
-   No flex, no grid, no intrinsic size calculation can ever break this.
-   ───────────────────────────────────────────────────────────────────────── */
+      /* ═══════════════════════════════════════════════════════════════════════════
+   THE DEFINITIVE FIX:
+
+   .opt has NO child elements at all.
+   The text content goes directly inside the div as a text node.
+   The circle is a ::before pseudo-element — it is NOT a DOM element,
+   cannot participate in block layout, cannot shrink or expand the .opt div.
+
+   The circle's background, border, color changes have ZERO effect on layout.
+   This is physically impossible to break.
+═══════════════════════════════════════════════════════════════════════════ */
+
       .opt {
-        position: relative;
-        /* left pad = 14px margin + 28px circle + 10px gap = 52px */
-        padding: 12px 14px 12px 52px;
+        display: block; /* explicit — never ambiguous */
+        position: relative; /* for ::before positioning only */
+        padding: 12px 14px 12px 52px; /* 52px left = 14 gap + 28 circle + 10 gap */
+        min-height: 52px; /* so circle doesn't overflow for short text */
         border-radius: var(--rs);
         border: 1.5px solid var(--bdr);
         margin-bottom: 8px;
         cursor: pointer;
-        min-height: 52px;
+        background: var(--surf2);
+        font-size: 14px;
+        line-height: 1.55;
+        word-wrap: break-word;
         transition:
           border-color 0.15s,
           background 0.15s;
-        background: var(--surf2);
-        /* no display:flex, no display:grid */
-      }
-      .opt:hover:not(.locked) {
-        border-color: var(--acc);
-        background: var(--acc-bg);
-      }
-      .opt.sel {
-        border-color: var(--acc);
-        background: var(--acc-bg);
-      }
-      .opt.rev-ok {
-        border-color: var(--ok);
-        background: var(--ok-bg);
-        cursor: default;
-      }
-      .opt.rev-wrong {
-        border-color: var(--err);
-        background: var(--err-bg);
-        cursor: default;
-      }
-      .opt.rev-skip {
-        cursor: default;
-        opacity: 0.45;
       }
 
-      /* Circle: absolutely positioned in the left padding slot — NEVER touches text */
-      .oltr {
+      /* The circle: absolutely positioned pseudo-element.
+   Changes to its background/border/color NEVER affect .opt's layout. */
+      .opt::before {
+        content: attr(data-icon); /* shows the letter from HTML attribute */
         position: absolute;
         left: 14px;
-        top: 12px; /* aligns with top text padding */
+        top: 12px; /* aligns with padding-top */
         width: 28px;
         height: 28px;
         border-radius: 50%;
@@ -4707,33 +4696,66 @@
         font-size: 13px;
         font-weight: 700;
         color: var(--muted);
+        background: transparent;
         transition: all 0.15s;
-        /* background and border color changes below have zero layout impact */
       }
-      .opt.sel .oltr {
+
+      /* Hover: only border/bg change, no layout change */
+      .opt:hover:not(.locked):not(.rev-ok):not(.rev-wrong):not(.rev-skip) {
+        border-color: var(--acc);
+        background: var(--acc-bg);
+      }
+      .opt:hover:not(.locked):not(.rev-ok):not(.rev-wrong):not(
+          .rev-skip
+        )::before {
+        color: var(--acc-txt);
+        border-color: var(--acc);
+      }
+
+      /* Selected before submit */
+      .opt.sel {
+        border-color: var(--acc);
+        background: var(--acc-bg);
+      }
+      .opt.sel::before {
         color: var(--acc-txt);
         border-color: var(--acc);
         background: var(--acc-bg);
       }
-      .opt.rev-ok .oltr {
+
+      /* Correct answer: green bg + green circle with ✓ */
+      .opt.rev-ok {
+        border-color: var(--ok);
+        background: var(--ok-bg);
+        cursor: default;
+      }
+      .opt.rev-ok::before {
+        content: "\2713";
         color: var(--ok-txt);
         border-color: var(--ok);
         background: var(--ok-bg);
       }
-      .opt.rev-wrong .oltr {
+
+      /* Wrong chosen answer: red bg + red circle with ✗ */
+      .opt.rev-wrong {
+        border-color: var(--err);
+        background: var(--err-bg);
+        cursor: default;
+      }
+      .opt.rev-wrong::before {
+        content: "\2717";
         color: var(--err-txt);
         border-color: var(--err);
         background: var(--err-bg);
       }
 
-      /* Text: plain block, fills the full content area after padding */
-      .otxt {
-        display: block;
-        font-size: 14px;
-        line-height: 1.55;
-        word-wrap: break-word;
-        overflow-wrap: anywhere;
-        /* width is 100% of content area by default — completely stable */
+      /* Other unchosen wrong: dimmed */
+      .opt.rev-skip {
+        cursor: default;
+        opacity: 0.45;
+      }
+      .opt.locked {
+        cursor: default;
       }
 
       .mhint {
@@ -5088,9 +5110,6 @@
         font-size: 11px;
         cursor: pointer;
         font-weight: 600;
-        transition:
-          background 0.12s,
-          color 0.12s;
         white-space: nowrap;
       }
       .vtab.act {
@@ -5135,7 +5154,7 @@
         margin-bottom: 12px;
       }
 
-      /* Auth modal */
+      /* Auth */
       .overlay {
         position: fixed;
         inset: 0;
@@ -5213,7 +5232,6 @@
     </style>
   </head>
   <body>
-    <!-- Auth -->
     <div class="overlay" id="authOverlay">
       <div class="modal">
         <h2>&#128274; AWS AI Quiz</h2>
@@ -5249,7 +5267,6 @@
       </div>
     </div>
 
-    <!-- Header -->
     <div class="hdr" id="hdrEl" style="display: none">
       <div class="logo">AWS <em>AI</em></div>
       <div class="hdr-mid">
@@ -5258,7 +5275,7 @@
       </div>
       <div class="hdr-right">
         <select
-          class="sel"
+          class="sel-try"
           id="trySel"
           onchange="switchTry(this.value)"
         ></select>
@@ -5280,7 +5297,6 @@
       var QS = JSON.parse(document.getElementById("qdata").textContent);
       console.log("Loaded", QS.length, "questions");
 
-      // Embedded credentials — anon key is public by design (protected by Row Level Security)
       var SB_URL = "https://xhdwuacoilfigeqfmivx.supabase.co";
       var SB_KEY =
         "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhoZHd1YWNvaWxmaWdlcWZtaXZ4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY1NDM5MjAsImV4cCI6MjA5MjExOTkyMH0.P7RI2PqXTgHBlYvHL4XonSNt72CAQr0kpEWGRcd_BcI";
@@ -5365,10 +5381,13 @@
               password: p,
             });
             if (res.error) {
-              var m = res.error.message;
-              if (m.includes("Invalid login") || m.includes("invalid_grant"))
-                m = "Wrong username or password.";
-              throw new Error(m);
+              var msg = res.error.message;
+              if (
+                msg.includes("Invalid login") ||
+                msg.includes("invalid_grant")
+              )
+                msg = "Wrong username or password.";
+              throw new Error(msg);
             }
           }
           USERID = res.data.user.id;
@@ -5547,10 +5566,10 @@
         );
       }
       function updSel() {
-        var sel = document.getElementById("trySel");
-        if (!sel) return;
+        var el = document.getElementById("trySel");
+        if (!el) return;
         var mt = maxT();
-        sel.innerHTML = "";
+        el.innerHTML = "";
         for (var i = 1; i <= mt; i++) {
           var o = document.createElement("option"),
             st = getStats(i);
@@ -5558,7 +5577,7 @@
           o.textContent =
             "Try " + i + " (" + st.answered + "/" + QS.length + ")";
           if (i === S.activeTry) o.selected = true;
-          sel.appendChild(o);
+          el.appendChild(o);
         }
       }
       function switchTry(v) {
@@ -5662,7 +5681,7 @@
               return kv[0] + ". " + kv[1];
             })
             .join("\n");
-          var ok = Object.keys(q.options).join(", ");
+          var ok2 = Object.keys(q.options).join(", ");
           prompt =
             "AWS AI Practitioner exam question:\n" +
             q.stem +
@@ -5671,7 +5690,7 @@
             "\nCorrect: " +
             q.correct.join(", ") +
             "\nReturn ONLY compact JSON, no markdown. Include ALL options (" +
-            ok +
+            ok2 +
             '). Format: {"concept":"AWS concept","A":{"ok":true,"why":"reason"},"B":{"ok":false,"why":"reason"}} — ok=true means correct.';
         } else if (q.type === "matching") {
           var pl = q.pairs
@@ -5777,7 +5796,7 @@
         var q = QS[S.idx],
           td = getTD(),
           st = getStats(S.activeTry);
-        var ans = Object.keys(td.answers).length,
+        var ansCount = Object.keys(td.answers).length,
           pct = Math.round(((S.idx + 1) / QS.length) * 100);
         var isAns = !!td.answers[q ? q.id : 0],
           locked = S.revealed || isAns;
@@ -5789,7 +5808,7 @@
           "</strong> / " +
           QS.length +
           "</span><span>" +
-          ans +
+          ansCount +
           " answered</span></div>" +
           '<div class="prog-bar"><div class="prog-fill" style="width:' +
           pct +
@@ -5802,13 +5821,17 @@
           ' onclick="goTo(' +
           (S.idx - 1) +
           ')">&#8592; Prev</button></div>' +
-          '<div class="nav-stats"><span class="pill pill-ok">&#10003; ' +
+          '<div class="nav-stats">' +
+          '<span class="pill pill-ok">&#10003; ' +
           st.correct +
-          '</span><span class="pill pill-err">&#10007; ' +
+          "</span>" +
+          '<span class="pill pill-err">&#10007; ' +
           st.incorrect +
-          '</span><span class="pill pill-neu">' +
-          (QS.length - ans) +
-          " left</span></div>" +
+          "</span>" +
+          '<span class="pill pill-neu">' +
+          (QS.length - ansCount) +
+          " left</span>" +
+          "</div>" +
           '<div class="nav-next"><button class="btn-nav ' +
           nCls +
           '"' +
@@ -5862,7 +5885,7 @@
           } else {
             h += ok
               ? '<div class="banner ban-ok">&#10003; Correct!</div>'
-              : '<div class="banner ban-err">&#10007; Incorrect &mdash; see correct answers below.</div>';
+              : '<div class="banner ban-err">&#10007; Incorrect &mdash; see below.</div>';
           }
           h += rExpl(q);
         }
@@ -5876,8 +5899,8 @@
             ">Submit Answer</button>";
 
         h +=
-          '<div style="display:flex;justify-content:center;align-items:center;gap:6px;margin-top:14px;padding-bottom:4px">' +
-          '<span style="font-size:12px;color:var(--muted)">Jump to:</span>' +
+          '<div style="display:flex;justify-content:center;align-items:center;gap:6px;margin-top:14px">' +
+          '<span style="font-size:12px;color:var(--muted)">Jump:</span>' +
           '<input class="jmp" type="number" min="1" max="' +
           QS.length +
           '" value="' +
@@ -5897,41 +5920,33 @@
         if (q.type === "ordering") attachDrag(q);
       }
 
-      // renderSingle — FIX: normalise ua to single letter (stored as array ['B'])
+      /* ── rSingle: .opt has NO child elements. Text is a direct text node.
+   The letter/icon is shown via CSS ::before using data-icon attribute.
+   Changing class (adding .sel, .rev-ok, .rev-wrong) CANNOT affect .opt width. ── */
       function rSingle(q, locked, prevAns) {
         var raw = prevAns || S.sel;
-        var ua = Array.isArray(raw) ? raw[0] : raw; // always a single letter or null
+        var ua = Array.isArray(raw) ? raw[0] : raw || null;
         var h = "";
         Object.entries(q.options).forEach(function (kv) {
           var L = kv[0],
             t = kv[1],
-            cls = "opt",
-            icon = L;
+            cls = "opt";
           if (locked) {
-            if (L === q.correct[0]) {
-              cls += " rev-ok";
-              icon = "&#10003;";
-            } else if (L === ua) {
-              cls += " rev-wrong";
-              icon = "&#10007;";
-            } else {
-              cls += " rev-skip";
-            }
-          } else if (L === ua) {
-            cls += " sel";
+            if (L === q.correct[0]) cls += " rev-ok";
+            else if (L === ua) cls += " rev-wrong";
+            else cls += " rev-skip";
+          } else {
+            if (L === ua) cls += " sel";
           }
           h +=
             '<div class="' +
             cls +
+            '" data-icon="' +
+            L +
             '"' +
-            (locked ? "" : " onclick=\"pickS('" + qa(L) + "')\"") +
+            (locked ? " class-locked" : " onclick=\"pickS('" + qa(L) + "')\"") +
             ">" +
-            '<div class="oltr">' +
-            icon +
-            "</div>" +
-            '<div class="otxt">' +
             esc(t) +
-            "</div>" +
             "</div>";
         });
         return h;
@@ -5941,7 +5956,6 @@
         render();
       }
 
-      // renderMulti
       function rMulti(q, locked, prevAns) {
         var ua = prevAns || (Array.isArray(S.sel) ? S.sel : []);
         var n = q.correct.length;
@@ -5957,15 +5971,9 @@
             cls = "opt",
             icon = L;
           if (locked) {
-            if (q.correct.includes(L)) {
-              cls += " rev-ok";
-              icon = "&#10003;";
-            } else if (ua.includes(L)) {
-              cls += " rev-wrong";
-              icon = "&#10007;";
-            } else {
-              cls += " rev-skip";
-            }
+            if (q.correct.includes(L)) cls += " rev-ok";
+            else if (ua.includes(L)) cls += " rev-wrong";
+            else cls += " rev-skip";
           } else if (ua.includes(L)) {
             cls += " sel";
             icon = "&#10003;";
@@ -5973,15 +5981,12 @@
           h +=
             '<div class="' +
             cls +
-            '"' +
-            (locked ? "" : " onclick=\"pickM('" + qa(L) + "')\"") +
-            ">" +
-            '<div class="oltr">' +
+            '" data-icon="' +
             icon +
-            "</div>" +
-            '<div class="otxt">' +
+            '"' +
+            (locked ? " class-locked" : " onclick=\"pickM('" + qa(L) + "')\"") +
+            ">" +
             esc(t) +
-            "</div>" +
             "</div>";
         });
         return h;
