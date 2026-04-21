@@ -4355,7 +4355,7 @@
         line-height: 1.65;
       }
 
-      /* ── Header ── */
+      /* Header */
       .hdr {
         background: var(--surf);
         border-bottom: 1px solid var(--bdr);
@@ -4491,7 +4491,7 @@
         font-size: 12px;
       }
 
-      /* ── Layout ── */
+      /* Layout */
       .main {
         max-width: 780px;
         margin: 0 auto;
@@ -4499,7 +4499,7 @@
         width: 100%;
       }
 
-      /* ── Progress bar ── */
+      /* Progress bar */
       .prog-wrap {
         margin-bottom: 10px;
       }
@@ -4522,7 +4522,7 @@
         transition: width 0.3s;
       }
 
-      /* ── Nav row with integrated prev/next + stats ── */
+      /* Nav bar */
       .nav-bar {
         display: grid;
         grid-template-columns: 1fr auto 1fr;
@@ -4538,7 +4538,6 @@
         gap: 6px;
         align-items: center;
         justify-content: center;
-        flex-wrap: nowrap;
       }
       .nav-next {
         justify-self: end;
@@ -4576,17 +4575,11 @@
         font-size: 13px;
         font-weight: 600;
         cursor: pointer;
-        transition:
-          background 0.12s,
-          border-color 0.12s;
+        transition: background 0.12s;
         white-space: nowrap;
-        display: flex;
-        align-items: center;
-        gap: 5px;
       }
       .btn-nav:hover:not(:disabled) {
         background: var(--surf2);
-        border-color: var(--bdr2);
       }
       .btn-nav:disabled {
         opacity: 0.3;
@@ -4596,8 +4589,6 @@
         background: var(--acc);
         color: #000;
         border-color: var(--acc);
-        padding: 8px 18px;
-        font-size: 14px;
         box-shadow: 0 2px 8px rgba(224, 123, 0, 0.35);
       }
       .btn-nav-next:hover:not(:disabled) {
@@ -4605,7 +4596,7 @@
         background: var(--acc);
       }
 
-      /* ── Type badge ── */
+      /* Type badge */
       .tbadge {
         display: inline-flex;
         align-items: center;
@@ -4633,7 +4624,7 @@
         color: var(--acc-txt);
       }
 
-      /* ── Card ── */
+      /* Card */
       .card {
         background: var(--surf);
         border-radius: var(--r);
@@ -4658,21 +4649,25 @@
         margin-bottom: 16px;
       }
 
-      /* ── OPTIONS: grid layout = bulletproof, text NEVER squeezes the circle ── */
+      /* ─────────────────────────────────────────────────────────────────────────
+   THE FIX: circle is position:absolute, floats over the left padding slot.
+   The text div gets 100% of the content area (after padding).
+   No flex, no grid, no intrinsic size calculation can ever break this.
+   ───────────────────────────────────────────────────────────────────────── */
       .opt {
-        display: grid;
-        grid-template-columns: 28px 1fr; /* fixed circle column, text fills the rest */
-        align-items: center;
-        gap: 10px;
-        padding: 12px 14px;
+        position: relative;
+        /* left pad = 14px margin + 28px circle + 10px gap = 52px */
+        padding: 12px 14px 12px 52px;
         border-radius: var(--rs);
         border: 1.5px solid var(--bdr);
         margin-bottom: 8px;
         cursor: pointer;
+        min-height: 52px;
         transition:
           border-color 0.15s,
           background 0.15s;
         background: var(--surf2);
+        /* no display:flex, no display:grid */
       }
       .opt:hover:not(.locked) {
         border-color: var(--acc);
@@ -4682,26 +4677,26 @@
         border-color: var(--acc);
         background: var(--acc-bg);
       }
-      /* correct: green */
       .opt.rev-ok {
         border-color: var(--ok);
         background: var(--ok-bg);
         cursor: default;
       }
-      /* wrong chosen: red bg + red border */
       .opt.rev-wrong {
         border-color: var(--err);
         background: var(--err-bg);
         cursor: default;
       }
-      /* other wrong: dimmed */
       .opt.rev-skip {
         cursor: default;
         opacity: 0.45;
       }
 
-      /* Circle: exact 28×28, never shrinks */
+      /* Circle: absolutely positioned in the left padding slot — NEVER touches text */
       .oltr {
+        position: absolute;
+        left: 14px;
+        top: 12px; /* aligns with top text padding */
         width: 28px;
         height: 28px;
         border-radius: 50%;
@@ -4713,6 +4708,7 @@
         font-weight: 700;
         color: var(--muted);
         transition: all 0.15s;
+        /* background and border color changes below have zero layout impact */
       }
       .opt.sel .oltr {
         color: var(--acc-txt);
@@ -4730,12 +4726,14 @@
         background: var(--err-bg);
       }
 
-      /* Text: fills the grid's 1fr column, wraps naturally */
+      /* Text: plain block, fills the full content area after padding */
       .otxt {
+        display: block;
         font-size: 14px;
         line-height: 1.55;
         word-wrap: break-word;
         overflow-wrap: anywhere;
+        /* width is 100% of content area by default — completely stable */
       }
 
       .mhint {
@@ -4745,7 +4743,7 @@
         font-style: italic;
       }
 
-      /* ── Matching ── */
+      /* Matching */
       .mtbl {
         width: 100%;
         border-collapse: separate;
@@ -4781,7 +4779,7 @@
         font-size: 14px;
       }
 
-      /* ── Ordering ── */
+      /* Ordering */
       .olist {
         list-style: none;
         display: flex;
@@ -4857,11 +4855,10 @@
         line-height: 1.5;
         flex: 1;
         min-width: 0;
-        word-wrap: break-word;
-        overflow-wrap: anywhere;
+        word-break: break-word;
       }
 
-      /* ── Banner + explanation ── */
+      /* Banner + explanation */
       .banner {
         padding: 10px 13px;
         border-radius: var(--rs);
@@ -4924,7 +4921,7 @@
         color: var(--err-txt);
       }
 
-      /* ── Jump input ── */
+      /* Jump */
       input.jmp {
         border: 1px solid var(--bdr2);
         border-radius: var(--rs);
@@ -4936,7 +4933,7 @@
         text-align: center;
       }
 
-      /* ── Stats views ── */
+      /* Stats */
       .sg {
         display: grid;
         grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
@@ -5138,7 +5135,7 @@
         margin-bottom: 12px;
       }
 
-      /* ── Auth modal ── */
+      /* Auth modal */
       .overlay {
         position: fixed;
         inset: 0;
@@ -5216,7 +5213,7 @@
     </style>
   </head>
   <body>
-    <!-- ── AUTH ── -->
+    <!-- Auth -->
     <div class="overlay" id="authOverlay">
       <div class="modal">
         <h2>&#128274; AWS AI Quiz</h2>
@@ -5252,7 +5249,7 @@
       </div>
     </div>
 
-    <!-- ── HEADER ── -->
+    <!-- Header -->
     <div class="hdr" id="hdrEl" style="display: none">
       <div class="logo">AWS <em>AI</em></div>
       <div class="hdr-mid">
@@ -5283,17 +5280,16 @@
       var QS = JSON.parse(document.getElementById("qdata").textContent);
       console.log("Loaded", QS.length, "questions");
 
-      // ── Embedded Supabase credentials ─────────────────────────────────────────
+      // Embedded credentials — anon key is public by design (protected by Row Level Security)
       var SB_URL = "https://xhdwuacoilfigeqfmivx.supabase.co";
       var SB_KEY =
         "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhoZHd1YWNvaWxmaWdlcWZtaXZ4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY1NDM5MjAsImV4cCI6MjA5MjExOTkyMH0.P7RI2PqXTgHBlYvHL4XonSNt72CAQr0kpEWGRcd_BcI";
-      // ─────────────────────────────────────────────────────────────────────────
 
       var SB = null,
         USERID = null,
         USERNAME = null,
-        saveTimer = null;
-      var AUTH_MODE = "signin";
+        saveTimer = null,
+        AUTH_MODE = "signin";
 
       function fakeEmail(u) {
         return (
@@ -5303,7 +5299,7 @@
             .replace(/[^a-z0-9_-]/g, "_") + "@awsquiz.app"
         );
       }
-      function setSyncStatus(ok, msg) {
+      function setSS(ok, msg) {
         var d = document.getElementById("syncDot"),
           t = document.getElementById("syncTxt");
         if (d) d.className = "sync-dot " + (ok ? "dot-ok" : "dot-err");
@@ -5337,60 +5333,52 @@
       }
 
       async function doAuth() {
-        var username = document.getElementById("authUser").value.trim();
-        var pwd = document.getElementById("authPwd").value;
+        var u = document.getElementById("authUser").value.trim(),
+          p = document.getElementById("authPwd").value;
         hideErr("authErr");
-        if (!username) {
-          showErr("authErr", "Please enter a username.");
-          return;
-        }
-        if (username.length < 2) {
+        if (!u || u.length < 2) {
           showErr("authErr", "Username must be at least 2 characters.");
           return;
         }
-        if (!pwd || pwd.length < 6) {
+        if (!p || p.length < 6) {
           showErr("authErr", "Password must be at least 6 characters.");
           return;
         }
-        var email = fakeEmail(username);
         var btn = document.getElementById("authBtn");
         btn.disabled = true;
         btn.textContent = "Please wait\u2026";
         try {
           var res;
           if (AUTH_MODE === "signup") {
-            res = await SB.auth.signUp({ email: email, password: pwd });
+            res = await SB.auth.signUp({ email: fakeEmail(u), password: p });
             if (res.error) throw res.error;
             if (!res.data.session) {
               res = await SB.auth.signInWithPassword({
-                email: email,
-                password: pwd,
+                email: fakeEmail(u),
+                password: p,
               });
               if (res.error) throw res.error;
             }
           } else {
             res = await SB.auth.signInWithPassword({
-              email: email,
-              password: pwd,
+              email: fakeEmail(u),
+              password: p,
             });
             if (res.error) {
-              var msg = res.error.message;
-              if (
-                msg.includes("Invalid login") ||
-                msg.includes("invalid_grant")
-              )
-                msg = "Wrong username or password.";
-              throw new Error(msg);
+              var m = res.error.message;
+              if (m.includes("Invalid login") || m.includes("invalid_grant"))
+                m = "Wrong username or password.";
+              throw new Error(m);
             }
           }
           USERID = res.data.user.id;
-          USERNAME = username;
-          localStorage.setItem("quiz_username", username);
+          USERNAME = u;
+          localStorage.setItem("quiz_username", u);
           document.getElementById("authOverlay").style.display = "none";
           document.getElementById("hdrEl").style.display = "";
           await startApp();
         } catch (e) {
-          showErr("authErr", e.message || "Something went wrong. Try again.");
+          showErr("authErr", e.message || "Something went wrong.");
           btn.disabled = false;
           btn.textContent =
             AUTH_MODE === "signup" ? "Create account \u2192" : "Sign in \u2192";
@@ -5401,7 +5389,7 @@
         await SB.auth.signOut();
         USERID = null;
         USERNAME = null;
-        S = mkState();
+        S = mkS();
         document.getElementById("hdrEl").style.display = "none";
         document.getElementById("authOverlay").style.display = "";
         AUTH_MODE = "signin";
@@ -5417,10 +5405,10 @@
       }
 
       async function startApp() {
-        setSyncStatus(false, "loading\u2026");
+        setSS(false, "loading\u2026");
         await load();
         S.loaded = true;
-        var td = getTryData();
+        var td = getTD();
         S.idx = 0;
         for (var i = 0; i < QS.length; i++) {
           if (!td.answers[QS[i].id]) {
@@ -5428,51 +5416,47 @@
             break;
           }
         }
-        updateTrySel();
+        updSel();
         render();
       }
-
       async function load() {
         try {
-          var res = await SB.from("quiz_progress")
+          var r = await SB.from("quiz_progress")
             .select("data")
             .eq("user_id", USERID)
             .single();
-          if (res.error && res.error.code !== "PGRST116") throw res.error;
-          if (res.data && res.data.data) {
-            S.tries = res.data.data.tries || [];
-            S.activeTry = res.data.data.activeTry || 1;
+          if (r.error && r.error.code !== "PGRST116") throw r.error;
+          if (r.data && r.data.data) {
+            S.tries = r.data.data.tries || [];
+            S.activeTry = r.data.data.activeTry || 1;
           }
-          setSyncStatus(true, "synced \u2713");
+          setSS(true, "synced \u2713");
         } catch (e) {
-          console.warn("Load:", e);
-          setSyncStatus(false, "offline");
+          console.warn(e);
+          setSS(false, "offline");
         }
       }
-
       async function dbsave() {
         if (!SB || !USERID) return;
         try {
-          var res = await SB.from("quiz_progress").upsert({
+          var r = await SB.from("quiz_progress").upsert({
             user_id: USERID,
             data: { tries: S.tries, activeTry: S.activeTry },
             updated_at: new Date().toISOString(),
           });
-          if (res.error) throw res.error;
-          setSyncStatus(true, "saved \u2713");
+          if (r.error) throw r.error;
+          setSS(true, "saved \u2713");
         } catch (e) {
-          setSyncStatus(false, "save failed");
+          setSS(false, "save failed");
         }
       }
-
-      function scheduleSave() {
+      function sched() {
         clearTimeout(saveTimer);
-        setSyncStatus(true, "saving\u2026");
+        setSS(true, "saving\u2026");
         saveTimer = setTimeout(dbsave, 900);
       }
 
-      // ── State ─────────────────────────────────────────────────────────────────
-      function mkState() {
+      function mkS() {
         return {
           idx: 0,
           sel: null,
@@ -5490,9 +5474,9 @@
           focusSort: "miss",
         };
       }
-      var S = mkState();
+      var S = mkS();
 
-      function getTryData() {
+      function getTD() {
         var t = S.tries.find(function (t) {
           return t.tryNum === S.activeTry;
         });
@@ -5518,7 +5502,7 @@
           var q = QS.find(function (q) {
             return q.id === parseInt(kv[0]);
           });
-          if (q && isCorrect(q, kv[1])) ok++;
+          if (q && isOK(q, kv[1])) ok++;
         });
         return {
           answered: a,
@@ -5528,7 +5512,7 @@
         };
       }
 
-      function isCorrect(q, ans) {
+      function isOK(q, ans) {
         if (q.type === "single")
           return Array.isArray(ans)
             ? ans[0] === q.correct[0]
@@ -5552,7 +5536,7 @@
         return false;
       }
 
-      function maxTry() {
+      function maxT() {
         return Math.max.apply(
           null,
           S.tries
@@ -5562,11 +5546,10 @@
             .concat([1]),
         );
       }
-
-      function updateTrySel() {
+      function updSel() {
         var sel = document.getElementById("trySel");
         if (!sel) return;
-        var mt = maxTry();
+        var mt = maxT();
         sel.innerHTML = "";
         for (var i = 1; i <= mt; i++) {
           var o = document.createElement("option"),
@@ -5578,10 +5561,9 @@
           sel.appendChild(o);
         }
       }
-
       function switchTry(v) {
         S.activeTry = parseInt(v);
-        var td = getTryData();
+        var td = getTD();
         S.idx = 0;
         for (var i = 0; i < QS.length; i++) {
           if (!td.answers[QS[i].id]) {
@@ -5589,17 +5571,17 @@
             break;
           }
         }
-        resetState();
-        scheduleSave();
+        rst();
+        sched();
         render();
       }
       function newTry() {
-        S.activeTry = maxTry() + 1;
+        S.activeTry = maxT() + 1;
         S.idx = 0;
         S.view = "quiz";
-        resetState();
-        scheduleSave();
-        updateTrySel();
+        rst();
+        sched();
+        updSel();
         render();
       }
       function setView(v) {
@@ -5608,11 +5590,11 @@
       }
       function goTo(idx) {
         S.idx = idx;
-        resetState();
+        rst();
         render();
       }
 
-      function resetState() {
+      function rst() {
         S.sel = null;
         S.matchSel = {};
         S.orderItems = null;
@@ -5621,7 +5603,7 @@
         S.loading = false;
         var q = QS[S.idx];
         if (!q) return;
-        var prev = getTryData().answers[q.id];
+        var prev = getTD().answers[q.id];
         if (prev) {
           if (q.type === "single" || q.type === "multi") S.sel = prev;
           else if (q.type === "matching")
@@ -5647,8 +5629,8 @@
         } else if (q.type === "ordering") {
           ans = S.orderItems.slice();
         }
-        getTryData().answers[q.id] = ans;
-        scheduleSave();
+        getTD().answers[q.id] = ans;
+        sched();
         S.revealed = true;
         S.loading = true;
         render();
@@ -5658,9 +5640,8 @@
           render();
           return;
         }
-        fetchExpl(q);
+        fetchX(q);
       }
-
       function seeExpl() {
         var q = QS[S.idx];
         if (S.cache[q.id]) {
@@ -5670,30 +5651,30 @@
         }
         S.loading = true;
         render();
-        fetchExpl(q);
+        fetchX(q);
       }
 
-      async function fetchExpl(q) {
+      async function fetchX(q) {
         var prompt = "";
         if (q.type === "single" || q.type === "multi") {
-          var optLines = Object.entries(q.options)
+          var ol = Object.entries(q.options)
             .map(function (kv) {
               return kv[0] + ". " + kv[1];
             })
             .join("\n");
-          var optKeys = Object.keys(q.options).join(", ");
+          var ok = Object.keys(q.options).join(", ");
           prompt =
             "AWS AI Practitioner exam question:\n" +
             q.stem +
             "\n" +
-            optLines +
+            ol +
             "\nCorrect: " +
             q.correct.join(", ") +
             "\nReturn ONLY compact JSON, no markdown. Include ALL options (" +
-            optKeys +
-            '). Format: {"concept":"the AWS concept","A":{"ok":true,"why":"reason"},"B":{"ok":false,"why":"reason"}} where ok=true means correct answer.';
+            ok +
+            '). Format: {"concept":"AWS concept","A":{"ok":true,"why":"reason"},"B":{"ok":false,"why":"reason"}} — ok=true means correct.';
         } else if (q.type === "matching") {
-          var plines = q.pairs
+          var pl = q.pairs
             .map(function (p, i) {
               return i + 1 + ". " + p.description + " -> " + p.correct;
             })
@@ -5702,10 +5683,10 @@
             "AWS matching question:\n" +
             q.stem +
             "\nCorrect:\n" +
-            plines +
+            pl +
             '\nReturn ONLY compact JSON: {"concept":"...","explanations":[{"description":"...","correct":"...","why":"..."}]}';
         } else if (q.type === "ordering") {
-          var slines = q.correct
+          var sl = q.correct
             .map(function (s, i) {
               return "Step " + (i + 1) + ": " + s;
             })
@@ -5714,7 +5695,7 @@
             "AWS ordering question:\n" +
             q.stem +
             "\nCorrect order:\n" +
-            slines +
+            sl +
             '\nReturn ONLY compact JSON: {"concept":"...","steps":[{"step":"...","why":"..."}]}';
         }
         try {
@@ -5725,7 +5706,7 @@
               model: "claude-sonnet-4-20250514",
               max_tokens: 1000,
               system:
-                "AWS AI Practitioner expert. Return ONLY valid compact JSON. No markdown, no backticks.",
+                "AWS expert. Return ONLY valid compact JSON. No markdown, no backticks.",
               messages: [{ role: "user", content: prompt }],
             }),
           });
@@ -5745,7 +5726,6 @@
         render();
       }
 
-      // ── Helpers ───────────────────────────────────────────────────────────────
       function esc(s) {
         return String(s || "")
           .replace(/&/g, "&amp;")
@@ -5765,7 +5745,7 @@
         var v = m[t] || ["?", "tb-s"];
         return '<span class="tbadge ' + v[1] + '">' + v[0] + "</span>";
       }
-      function canSubmit(q) {
+      function canSub(q) {
         if (q.type === "single") return !!S.sel;
         if (q.type === "multi") return Array.isArray(S.sel) && S.sel.length > 0;
         if (q.type === "matching")
@@ -5775,90 +5755,73 @@
         return false;
       }
 
-      // ── Render ─────────────────────────────────────────────────────────────────
       function render() {
         var m = document.getElementById("main");
         if (!m || !S.loaded) return;
         if (S.view === "stats") {
-          renderStats(m);
+          rStats(m);
           return;
         }
         if (S.view === "focus") {
-          renderFocus(m);
+          rFocus(m);
           return;
         }
         if (S.view === "sync") {
-          renderSync(m);
+          rSync(m);
           return;
         }
-        renderQuiz(m);
+        rQuiz(m);
       }
 
-      function renderQuiz(m) {
+      function rQuiz(m) {
         var q = QS[S.idx],
-          td = getTryData(),
+          td = getTD(),
           st = getStats(S.activeTry);
-        var answered = Object.keys(td.answers).length;
-        var pct = Math.round(((S.idx + 1) / QS.length) * 100);
+        var ans = Object.keys(td.answers).length,
+          pct = Math.round(((S.idx + 1) / QS.length) * 100);
+        var isAns = !!td.answers[q ? q.id : 0],
+          locked = S.revealed || isAns;
+        var nCls = "btn-nav" + (S.revealed || isAns ? " btn-nav-next" : "");
 
-        // Progress bar
         var h =
           '<div class="prog-wrap"><div class="prog-meta"><span>Q <strong>' +
           (S.idx + 1) +
           "</strong> / " +
           QS.length +
           "</span><span>" +
-          answered +
+          ans +
           " answered</span></div>" +
           '<div class="prog-bar"><div class="prog-fill" style="width:' +
           pct +
           '%"></div></div></div>';
 
-        // ── Nav bar: Prev | Stats pills | Next ──────────────────────────────────
-        var prevDis = S.idx === 0 ? " disabled" : "";
-        var nextDis = S.idx === QS.length - 1 ? " disabled" : "";
-        var isAns = !!td.answers[q ? q.id : 0];
-        // Next button is prominent only after answering (or question already answered)
-        var nextCls = "btn-nav" + (S.revealed || isAns ? " btn-nav-next" : "");
         h +=
           '<div class="nav-bar">' +
-          // Prev
-          '<div class="nav-prev">' +
-          '<button class="btn-nav"' +
-          prevDis +
+          '<div class="nav-prev"><button class="btn-nav"' +
+          (S.idx === 0 ? " disabled" : "") +
           ' onclick="goTo(' +
           (S.idx - 1) +
-          ')">&#8592; Prev</button>' +
-          "</div>" +
-          // Stats pills (centred)
-          '<div class="nav-stats">' +
-          '<span class="pill pill-ok">&#10003; ' +
+          ')">&#8592; Prev</button></div>' +
+          '<div class="nav-stats"><span class="pill pill-ok">&#10003; ' +
           st.correct +
-          "</span>" +
-          '<span class="pill pill-err">&#10007; ' +
+          '</span><span class="pill pill-err">&#10007; ' +
           st.incorrect +
-          "</span>" +
-          '<span class="pill pill-neu">' +
-          (QS.length - answered) +
-          " left</span>" +
-          "</div>" +
-          // Next
-          '<div class="nav-next">' +
-          '<button class="btn-nav ' +
-          nextCls +
+          '</span><span class="pill pill-neu">' +
+          (QS.length - ans) +
+          " left</span></div>" +
+          '<div class="nav-next"><button class="btn-nav ' +
+          nCls +
           '"' +
-          nextDis +
+          (S.idx === QS.length - 1 ? " disabled" : "") +
           ' onclick="goTo(' +
           (S.idx + 1) +
-          ')">Next &#8594;</button>' +
-          "</div>" +
+          ')">Next &#8594;</button></div>' +
           "</div>";
 
         if (!q) {
           m.innerHTML = h + '<div class="empty">No question.</div>';
           return;
         }
-        var locked = S.revealed || isAns;
 
         h +=
           '<div class="card"><div class="qnum">Q' +
@@ -5868,13 +5831,12 @@
           '</div><div class="stem">' +
           esc(q.stem) +
           "</div>";
-        if (q.type === "single") h += renderSingle(q, locked, td.answers[q.id]);
-        else if (q.type === "multi")
-          h += renderMulti(q, locked, td.answers[q.id]);
+        if (q.type === "single") h += rSingle(q, locked, td.answers[q.id]);
+        else if (q.type === "multi") h += rMulti(q, locked, td.answers[q.id]);
         else if (q.type === "matching")
-          h += renderMatching(q, locked, td.answers[q.id]);
+          h += rMatch(q, locked, td.answers[q.id]);
         else if (q.type === "ordering")
-          h += renderOrdering(q, locked, td.answers[q.id]);
+          h += rOrder(q, locked, td.answers[q.id]);
         h += "</div>";
 
         if (S.revealed) {
@@ -5885,7 +5847,7 @@
               : q.type === "ordering"
                 ? S.orderItems
                 : S.sel;
-          var ok = isCorrect(q, ua);
+          var ok = isOK(q, ua);
           if (q.type === "single" || q.type === "multi") {
             var da = Array.isArray(ua) ? ua.join(", ") : String(ua || "");
             h += ok
@@ -5900,23 +5862,21 @@
           } else {
             h += ok
               ? '<div class="banner ban-ok">&#10003; Correct!</div>'
-              : '<div class="banner ban-err">&#10007; Incorrect &mdash; correct answers shown below.</div>';
+              : '<div class="banner ban-err">&#10007; Incorrect &mdash; see correct answers below.</div>';
           }
-          h += renderExplPanel(q);
+          h += rExpl(q);
         }
-
         if (isAns && !S.revealed)
           h +=
             '<button class="btn" style="margin-bottom:10px;width:100%" onclick="seeExpl()">See Explanation</button>';
         if (!isAns && !S.revealed)
           h +=
             '<button class="btn-acc" onclick="submit()"' +
-            (canSubmit(q) ? "" : " disabled") +
+            (canSub(q) ? "" : " disabled") +
             ">Submit Answer</button>";
 
-        // Jump input row at the bottom
         h +=
-          '<div style="display:flex;justify-content:center;align-items:center;gap:6px;margin-top:14px">' +
+          '<div style="display:flex;justify-content:center;align-items:center;gap:6px;margin-top:14px;padding-bottom:4px">' +
           '<span style="font-size:12px;color:var(--muted)">Jump to:</span>' +
           '<input class="jmp" type="number" min="1" max="' +
           QS.length +
@@ -5937,11 +5897,10 @@
         if (q.type === "ordering") attachDrag(q);
       }
 
-      // ── Answer renderers ───────────────────────────────────────────────────────
-      function renderSingle(q, locked, prevAns) {
-        // FIX: normalise ua to a single letter string (prevAns is stored as ['B'])
-        var raw = prevAns || (Array.isArray(S.sel) ? S.sel : null);
-        var ua = Array.isArray(raw) ? raw[0] : raw;
+      // renderSingle — FIX: normalise ua to single letter (stored as array ['B'])
+      function rSingle(q, locked, prevAns) {
+        var raw = prevAns || S.sel;
+        var ua = Array.isArray(raw) ? raw[0] : raw; // always a single letter or null
         var h = "";
         Object.entries(q.options).forEach(function (kv) {
           var L = kv[0],
@@ -5952,15 +5911,13 @@
             if (L === q.correct[0]) {
               cls += " rev-ok";
               icon = "&#10003;";
-            } // green ✓
-            else if (L === ua) {
+            } else if (L === ua) {
               cls += " rev-wrong";
               icon = "&#10007;";
-            } // red ✗ — was broken before
-            else {
+            } else {
               cls += " rev-skip";
-            } // dimmed
-          } else if (L === (Array.isArray(S.sel) ? S.sel[0] : S.sel)) {
+            }
+          } else if (L === ua) {
             cls += " sel";
           }
           h +=
@@ -5971,9 +5928,11 @@
             ">" +
             '<div class="oltr">' +
             icon +
-            '</div><div class="otxt">' +
+            "</div>" +
+            '<div class="otxt">' +
             esc(t) +
-            "</div></div>";
+            "</div>" +
+            "</div>";
         });
         return h;
       }
@@ -5982,8 +5941,8 @@
         render();
       }
 
-      function renderMulti(q, locked, prevAns) {
-        // FIX: normalise ua to array of letters
+      // renderMulti
+      function rMulti(q, locked, prevAns) {
         var ua = prevAns || (Array.isArray(S.sel) ? S.sel : []);
         var n = q.correct.length;
         var h =
@@ -6019,9 +5978,11 @@
             ">" +
             '<div class="oltr">' +
             icon +
-            '</div><div class="otxt">' +
+            "</div>" +
+            '<div class="otxt">' +
             esc(t) +
-            "</div></div>";
+            "</div>" +
+            "</div>";
         });
         return h;
       }
@@ -6033,7 +5994,7 @@
         render();
       }
 
-      function renderMatching(q, locked, prevAns) {
+      function rMatch(q, locked, prevAns) {
         var us = prevAns || S.matchSel,
           h = '<table class="mtbl">';
         q.pairs.forEach(function (p, i) {
@@ -6081,13 +6042,13 @@
         render();
       }
 
-      function renderOrdering(q, locked, prevAns) {
+      function rOrder(q, locked, prevAns) {
         var items = prevAns || S.orderItems || q.items.slice(),
           h = '<ul class="olist" id="OL">';
         items.forEach(function (item, i) {
-          var ok = item === q.correct[i];
-          var cls =
-            "oitem" + (locked ? (ok ? " rev-ok" : " rev-err locked") : "");
+          var ok = item === q.correct[i],
+            cls =
+              "oitem" + (locked ? (ok ? " rev-ok" : " rev-err locked") : "");
           h +=
             '<li class="' +
             cls +
@@ -6098,8 +6059,7 @@
             '">' +
             '<div class="onum">' +
             (i + 1) +
-            "</div>" +
-            '<div class="ogrip">' +
+            '</div><div class="ogrip">' +
             (locked ? "" : "&#10240; ") +
             "</div>" +
             '<div class="otxt2">' +
@@ -6154,7 +6114,7 @@
         });
       }
 
-      function renderExplPanel(q) {
+      function rExpl(q) {
         var h = '<div class="expl"><div class="xhdr">Explanation</div>';
         if (S.loading) {
           h +=
@@ -6177,8 +6137,7 @@
               h +=
                 '<div class="xrow"><div class="xico">' +
                 (ok ? "&#9989;" : "&#10060;") +
-                "</div>" +
-                '<div class="xtxt ' +
+                '</div><div class="xtxt ' +
                 (ok ? "bok" : "berr") +
                 '"><strong>' +
                 L +
@@ -6191,8 +6150,7 @@
           } else if (q.type === "matching" && S.expl.explanations) {
             S.expl.explanations.forEach(function (e) {
               h +=
-                '<div class="xrow"><div class="xico">&#9989;</div>' +
-                '<div class="xtxt bok"><strong>' +
+                '<div class="xrow"><div class="xico">&#9989;</div><div class="xtxt bok"><strong>' +
                 esc(e.description) +
                 "</strong> &#8594; " +
                 esc(e.correct) +
@@ -6205,8 +6163,7 @@
               h +=
                 '<div class="xrow"><div class="xico" style="color:var(--acc);font-weight:700">' +
                 (i + 1) +
-                "</div>" +
-                '<div class="xtxt"><strong>' +
+                '</div><div class="xtxt"><strong>' +
                 esc(s.step || q.correct[i]) +
                 "</strong><br>" +
                 esc(s.why || "") +
@@ -6217,9 +6174,8 @@
         return h + "</div>";
       }
 
-      // ── Stats ─────────────────────────────────────────────────────────────────
-      function renderStats(m) {
-        var mt = maxTry(),
+      function rStats(m) {
+        var mt = maxT(),
           h = tabs("stats");
         for (var tn = 1; tn <= mt; tn++) {
           var st = getStats(tn),
@@ -6230,8 +6186,7 @@
           h +=
             '<div class="try-sec" style="' +
             (ia ? "border-color:var(--acc)" : "") +
-            '"><div class="try-hdr">' +
-            "<span>Try " +
+            '"><div class="try-hdr"><span>Try ' +
             tn +
             (t
               ? ' <span style="color:var(--muted);font-weight:400;font-size:11px">&#183; ' +
@@ -6251,17 +6206,13 @@
           h +=
             '<div class="sg"><div class="sc"><div class="sn">' +
             st.answered +
-            '</div><div class="sl">Answered</div></div>' +
-            '<div class="sc"><div class="sn sn-ok">' +
+            '</div><div class="sl">Answered</div></div><div class="sc"><div class="sn sn-ok">' +
             st.correct +
-            '</div><div class="sl">Correct</div></div>' +
-            '<div class="sc"><div class="sn sn-err">' +
+            '</div><div class="sl">Correct</div></div><div class="sc"><div class="sn sn-err">' +
             st.incorrect +
-            '</div><div class="sl">Wrong</div></div>' +
-            '<div class="sc"><div class="sn sn-acc">' +
+            '</div><div class="sl">Wrong</div></div><div class="sc"><div class="sn sn-acc">' +
             st.pct +
-            '%</div><div class="sl">Score</div></div>' +
-            '<div class="sc"><div class="sn">' +
+            '%</div><div class="sl">Score</div></div><div class="sc"><div class="sn">' +
             (QS.length - st.answered) +
             '</div><div class="sl">Remaining</div></div></div>';
           if (t && Object.keys(t.answers).length > 0) {
@@ -6273,7 +6224,7 @@
                   (tn === S.activeTry && i === S.idx
                     ? " cur"
                     : a
-                      ? isCorrect(qq, a)
+                      ? isOK(qq, a)
                         ? " dok"
                         : " derr"
                       : "");
@@ -6299,9 +6250,8 @@
         m.innerHTML = h;
       }
 
-      // ── Focus ─────────────────────────────────────────────────────────────────
-      function renderFocus(m) {
-        var mt = maxTry(),
+      function rFocus(m) {
+        var mt = maxT(),
           h = tabs("focus");
         h += '<div class="h2">Question Focus Analysis</div>';
         h +=
@@ -6324,8 +6274,7 @@
           (S.focusSort === "id" ? " btn-pri" : "") +
           '" onclick="S.focusSort=\'id\';render()">Q Number</button></div>';
         if (mt === 0) {
-          m.innerHTML =
-            h + '<div class="empty">No tries yet. Start the quiz first!</div>';
+          m.innerHTML = h + '<div class="empty">No tries yet.</div>';
           return;
         }
         var qs2 = QS.map(function (qq, qi) {
@@ -6341,7 +6290,7 @@
             if (a == null) {
               sk++;
               hist.push("s");
-            } else if (isCorrect(qq, a)) {
+            } else if (isOK(qq, a)) {
               cor++;
               hist.push("o");
             } else {
@@ -6424,8 +6373,7 @@
             badge(x.qq.type) +
             "</td><td>" +
             dots +
-            "</td>" +
-            "<td>" +
+            "</td><td>" +
             (x.wr > 0
               ? '<span style="color:var(--err-txt);font-weight:700">' +
                 x.wr +
@@ -6435,8 +6383,7 @@
               : '<span style="color:var(--ok-txt)">' +
                 (x.cor > 0 ? "All correct" : "Not tried") +
                 "</span>") +
-            "</td>" +
-            '<td><button class="btn" onclick="event.stopPropagation();goTo(' +
+            '</td><td><button class="btn" onclick="event.stopPropagation();goTo(' +
             x.qi +
             ");setView('quiz')\">Review &#8594;</button></td></tr>";
         });
@@ -6444,18 +6391,12 @@
         m.innerHTML = h;
       }
 
-      // ── Sync / Account ────────────────────────────────────────────────────────
-      function renderSync(m) {
+      function rSync(m) {
         m.innerHTML =
           tabs("sync") +
-          '<div class="h2">Account</div>' +
-          '<div class="try-sec">' +
-          '<p style="font-size:14px;margin-bottom:4px">Signed in as <strong>' +
+          '<div class="h2">Account</div><div class="try-sec"><p style="font-size:14px;margin-bottom:4px">Signed in as <strong>' +
           esc(USERNAME || "?") +
-          "</strong></p>" +
-          '<p style="font-size:13px;color:var(--muted);margin-bottom:14px;line-height:1.6">Progress syncs automatically. On any new device: open the app and sign in with the same username and password.</p>' +
-          '<button class="btn" onclick="signOut()">Sign out</button>' +
-          "</div>";
+          '</strong></p><p style="font-size:13px;color:var(--muted);margin-bottom:14px;line-height:1.6">Progress syncs automatically. On any new device: open the app and sign in with the same username and password.</p><button class="btn" onclick="signOut()">Sign out</button></div>';
       }
 
       function tabs(active) {
@@ -6479,7 +6420,6 @@
         return h + "</div>";
       }
 
-      // ── Boot ──────────────────────────────────────────────────────────────────
       (async function boot() {
         SB = supabase.createClient(SB_URL, SB_KEY);
         try {
@@ -6495,7 +6435,7 @@
             return;
           }
         } catch (e) {
-          console.warn("Session:", e);
+          console.warn(e);
         }
         var saved = localStorage.getItem("quiz_username");
         if (saved) document.getElementById("authUser").value = saved;
