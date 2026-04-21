@@ -4355,44 +4355,41 @@
         line-height: 1.65;
       }
 
-      /* Header */
+      /* ── HEADER: fixed-width slots, nothing can overflow ── */
       .hdr {
         background: var(--surf);
         border-bottom: 1px solid var(--bdr);
-        padding: 8px 12px;
+        padding: 7px 10px;
         display: flex;
         align-items: center;
-        gap: 8px;
+        gap: 6px;
         position: sticky;
         top: 0;
         z-index: 30;
         width: 100%;
         overflow: hidden;
       }
-      .logo {
+      .hdr-logo {
         font-weight: 700;
         font-size: 13px;
         color: var(--acc);
         white-space: nowrap;
-        flex-shrink: 1;
-        min-width: 0;
+        flex-shrink: 0;
       }
-      .logo em {
+      .hdr-logo em {
         color: var(--text);
         font-style: normal;
         font-weight: 400;
       }
-      .hdr-mid {
+      .hdr-sync {
         display: flex;
         align-items: center;
-        gap: 4px;
-        flex-shrink: 1;
-        min-width: 0;
-        overflow: hidden;
+        gap: 3px;
+        flex-shrink: 0;
       }
       .sync-dot {
-        width: 7px;
-        height: 7px;
+        width: 6px;
+        height: 6px;
         border-radius: 50%;
         display: inline-block;
         flex-shrink: 0;
@@ -4406,31 +4403,111 @@
       .dot-wait {
         background: var(--hint);
       }
-      .sync-txt {
+      /* sync text hidden on mobile, shown on wider */
+      .sync-lbl {
         font-size: 10px;
         color: var(--muted);
         white-space: nowrap;
-        max-width: 55px;
+        display: none;
+      }
+      @media (min-width: 500px) {
+        .sync-lbl {
+          display: inline;
+        }
+      }
+      /* Try button replaces native select — no dropdown arrow clipping issues */
+      .hdr-try {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        margin-left: auto;
+        flex-shrink: 0;
+      }
+      .try-btn {
+        font-size: 11px;
+        font-weight: 600;
+        padding: 4px 8px;
+        border-radius: var(--rs);
+        border: 1px solid var(--bdr2);
+        background: var(--surf2);
+        color: var(--text);
+        cursor: pointer;
+        white-space: nowrap;
+        max-width: 80px;
         overflow: hidden;
         text-overflow: ellipsis;
       }
-      .hdr-right {
+      .try-btn:hover {
+        background: var(--surf);
+      }
+      .hdr-actions {
         display: flex;
         align-items: center;
-        gap: 5px;
+        gap: 4px;
         flex-shrink: 0;
-        margin-left: auto;
       }
-      .sel-try {
-        border: 1px solid var(--bdr2);
+      .hbtn {
+        padding: 5px 7px;
         border-radius: var(--rs);
-        background: var(--surf);
+        border: 1px solid var(--bdr2);
+        background: transparent;
         color: var(--text);
-        padding: 4px 6px;
-        font-size: 11px;
+        font-size: 12px;
         cursor: pointer;
-        max-width: 90px;
+        flex-shrink: 0;
       }
+      .hbtn:hover {
+        background: var(--surf2);
+      }
+      .hbtn-pri {
+        background: var(--text);
+        color: var(--surf);
+        border-color: var(--text);
+        font-weight: 700;
+      }
+      .hbtn-pri:hover {
+        opacity: 0.85;
+        background: var(--text);
+      }
+      .hbtn-exam {
+        background: var(--info-bg);
+        color: var(--info-txt);
+        border-color: var(--info-txt);
+        font-weight: 700;
+      }
+
+      /* Try dropdown (custom, shown when try-btn clicked) */
+      .try-dropdown {
+        position: absolute;
+        top: 46px;
+        left: 0;
+        right: 0;
+        background: var(--surf);
+        border-bottom: 1px solid var(--bdr2);
+        z-index: 50;
+        max-height: 60vh;
+        overflow-y: auto;
+        display: none;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+      }
+      .try-dropdown.open {
+        display: block;
+      }
+      .try-option {
+        padding: 10px 16px;
+        cursor: pointer;
+        font-size: 13px;
+        border-bottom: 1px solid var(--bdr);
+      }
+      .try-option:hover {
+        background: var(--surf2);
+      }
+      .try-option.active {
+        color: var(--acc);
+        font-weight: 700;
+      }
+
+      /* Generic buttons */
       .btn {
         padding: 5px 9px;
         border-radius: var(--rs);
@@ -4489,6 +4566,21 @@
         cursor: pointer;
         font-size: 12px;
       }
+      .btn-retry {
+        background: var(--info-bg);
+        color: var(--info-txt);
+        border: 1px solid var(--info-txt);
+        font-weight: 600;
+        border-radius: var(--rs);
+        padding: 7px 14px;
+        cursor: pointer;
+        font-size: 13px;
+        width: 100%;
+        margin-bottom: 8px;
+      }
+      .btn-retry:hover {
+        opacity: 0.9;
+      }
 
       /* Layout */
       .main {
@@ -4521,7 +4613,7 @@
         transition: width 0.3s;
       }
 
-      /* Nav bar: Prev | stats | Next */
+      /* Nav bar: Prev | pills | Next */
       .nav-bar {
         display: grid;
         grid-template-columns: 1fr auto 1fr;
@@ -4534,9 +4626,10 @@
       }
       .nav-stats {
         display: flex;
-        gap: 6px;
+        gap: 5px;
         align-items: center;
         justify-content: center;
+        flex-wrap: nowrap;
       }
       .nav-next {
         justify-self: end;
@@ -4545,9 +4638,9 @@
         display: inline-flex;
         align-items: center;
         gap: 3px;
-        padding: 4px 10px;
+        padding: 4px 9px;
         border-radius: 99px;
-        font-size: 12px;
+        font-size: 11px;
         font-weight: 700;
         white-space: nowrap;
       }
@@ -4563,10 +4656,9 @@
         background: var(--surf2);
         color: var(--muted);
         border: 1px solid var(--bdr);
-        font-size: 11px;
       }
       .btn-nav {
-        padding: 7px 14px;
+        padding: 7px 13px;
         border-radius: var(--rs);
         border: 1.5px solid var(--bdr2);
         background: var(--surf);
@@ -4587,7 +4679,7 @@
         background: var(--acc);
         color: #000;
         border-color: var(--acc);
-        padding: 8px 18px;
+        padding: 8px 16px;
         font-size: 14px;
         box-shadow: 0 2px 8px rgba(224, 123, 0, 0.35);
       }
@@ -4649,23 +4741,15 @@
         margin-bottom: 16px;
       }
 
-      /* ═══════════════════════════════════════════════════════════════════════════
-   THE DEFINITIVE FIX:
-
-   .opt has NO child elements at all.
-   The text content goes directly inside the div as a text node.
-   The circle is a ::before pseudo-element — it is NOT a DOM element,
-   cannot participate in block layout, cannot shrink or expand the .opt div.
-
-   The circle's background, border, color changes have ZERO effect on layout.
-   This is physically impossible to break.
-═══════════════════════════════════════════════════════════════════════════ */
-
+      /* ═══════════════════════════════════════════════════════════════
+   OPTION: display:block, NO child elements, circle = ::before
+   Width is always 100% of parent content area. Cannot break.
+═══════════════════════════════════════════════════════════════ */
       .opt {
-        display: block; /* explicit — never ambiguous */
-        position: relative; /* for ::before positioning only */
-        padding: 12px 14px 12px 52px; /* 52px left = 14 gap + 28 circle + 10 gap */
-        min-height: 52px; /* so circle doesn't overflow for short text */
+        display: block;
+        position: relative;
+        padding: 12px 14px 12px 52px;
+        min-height: 52px;
         border-radius: var(--rs);
         border: 1.5px solid var(--bdr);
         margin-bottom: 8px;
@@ -4678,14 +4762,11 @@
           border-color 0.15s,
           background 0.15s;
       }
-
-      /* The circle: absolutely positioned pseudo-element.
-   Changes to its background/border/color NEVER affect .opt's layout. */
       .opt::before {
-        content: attr(data-icon); /* shows the letter from HTML attribute */
+        content: attr(data-icon);
         position: absolute;
         left: 14px;
-        top: 12px; /* aligns with padding-top */
+        top: 12px;
         width: 28px;
         height: 28px;
         border-radius: 50%;
@@ -4699,8 +4780,6 @@
         background: transparent;
         transition: all 0.15s;
       }
-
-      /* Hover: only border/bg change, no layout change */
       .opt:hover:not(.locked):not(.rev-ok):not(.rev-wrong):not(.rev-skip) {
         border-color: var(--acc);
         background: var(--acc-bg);
@@ -4711,8 +4790,6 @@
         color: var(--acc-txt);
         border-color: var(--acc);
       }
-
-      /* Selected before submit */
       .opt.sel {
         border-color: var(--acc);
         background: var(--acc-bg);
@@ -4722,8 +4799,6 @@
         border-color: var(--acc);
         background: var(--acc-bg);
       }
-
-      /* Correct answer: green bg + green circle with ✓ */
       .opt.rev-ok {
         border-color: var(--ok);
         background: var(--ok-bg);
@@ -4735,8 +4810,6 @@
         border-color: var(--ok);
         background: var(--ok-bg);
       }
-
-      /* Wrong chosen answer: red bg + red circle with ✗ */
       .opt.rev-wrong {
         border-color: var(--err);
         background: var(--err-bg);
@@ -4748,8 +4821,6 @@
         border-color: var(--err);
         background: var(--err-bg);
       }
-
-      /* Other unchosen wrong: dimmed */
       .opt.rev-skip {
         cursor: default;
         opacity: 0.45;
@@ -4757,7 +4828,6 @@
       .opt.locked {
         cursor: default;
       }
-
       .mhint {
         font-size: 11px;
         color: var(--muted);
@@ -4880,16 +4950,14 @@
         word-break: break-word;
       }
 
-      /* Banner + explanation */
+      /* Banner */
       .banner {
         padding: 10px 13px;
         border-radius: var(--rs);
         font-size: 14px;
         font-weight: 600;
         margin-bottom: 10px;
-        display: flex;
-        align-items: center;
-        gap: 8px;
+        line-height: 1.5;
       }
       .ban-ok {
         background: var(--ok-bg);
@@ -4899,6 +4967,16 @@
         background: var(--err-bg);
         color: var(--err-txt);
       }
+      .ban-info {
+        background: var(--info-bg);
+        color: var(--info-txt);
+      }
+      .ban-retry {
+        background: var(--warn-bg);
+        color: var(--warn-txt);
+      }
+
+      /* Explanation */
       .expl {
         background: var(--surf);
         border-radius: var(--r);
@@ -4955,10 +5033,10 @@
         text-align: center;
       }
 
-      /* Stats */
+      /* Stats grid */
       .sg {
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+        grid-template-columns: repeat(auto-fit, minmax(90px, 1fr));
         gap: 8px;
         margin-bottom: 14px;
       }
@@ -5154,6 +5232,153 @@
         margin-bottom: 12px;
       }
 
+      /* ── MOCK EXAM styles ── */
+      .exam-timer {
+        font-family: monospace;
+        font-size: 18px;
+        font-weight: 700;
+        padding: 5px 12px;
+        border-radius: var(--rs);
+        background: var(--surf2);
+        border: 1.5px solid var(--bdr2);
+        min-width: 70px;
+        text-align: center;
+        flex-shrink: 0;
+      }
+      .exam-timer.warn {
+        background: var(--warn-bg);
+        color: var(--warn-txt);
+        border-color: var(--warn-txt);
+      }
+      .exam-timer.crit {
+        background: var(--err-bg);
+        color: var(--err-txt);
+        border-color: var(--err);
+        animation: pulse 1s infinite;
+      }
+      @keyframes pulse {
+        0%,
+        100% {
+          opacity: 1;
+        }
+        50% {
+          opacity: 0.6;
+        }
+      }
+      .exam-qmap {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 3px;
+        padding: 10px;
+        background: var(--surf);
+        border-radius: var(--r);
+        border: 1px solid var(--bdr);
+        margin-bottom: 12px;
+      }
+      .eqd {
+        width: 28px;
+        height: 22px;
+        border-radius: 4px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 9px;
+        cursor: pointer;
+        border: 1px solid var(--bdr);
+        background: var(--surf2);
+        color: var(--hint);
+        font-weight: 700;
+      }
+      .eqd:hover {
+        opacity: 0.8;
+      }
+      .eqd.ecur {
+        border-color: var(--acc);
+        color: var(--acc);
+        background: var(--acc-bg);
+      }
+      .eqd.edone {
+        background: var(--info-bg);
+        border-color: var(--info-txt);
+        color: var(--info-txt);
+      }
+      .eqd.eflag {
+        background: var(--warn-bg);
+        border-color: var(--warn-txt);
+        color: var(--warn-txt);
+      }
+      .eqd.eok {
+        background: var(--ok-bg);
+        border-color: var(--ok);
+        color: var(--ok-txt);
+      }
+      .eqd.eerr {
+        background: var(--err-bg);
+        border-color: var(--err);
+        color: var(--err-txt);
+      }
+      .flag-btn {
+        padding: 5px 10px;
+        border-radius: var(--rs);
+        border: 1px solid var(--bdr2);
+        background: transparent;
+        color: var(--muted);
+        font-size: 12px;
+        cursor: pointer;
+      }
+      .flag-btn.on {
+        background: var(--warn-bg);
+        color: var(--warn-txt);
+        border-color: var(--warn-txt);
+      }
+      .score-circle {
+        width: 110px;
+        height: 110px;
+        border-radius: 50%;
+        border: 6px solid var(--bdr);
+        margin: 0 auto 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-direction: column;
+      }
+      .score-circle.pass {
+        border-color: var(--ok);
+      }
+      .score-circle.fail {
+        border-color: var(--err);
+      }
+      .score-num {
+        font-size: 26px;
+        font-weight: 700;
+      }
+      .score-sub {
+        font-size: 11px;
+        color: var(--muted);
+      }
+
+      /* Exam result history rows */
+      .exam-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 10px 14px;
+        border-radius: var(--rs);
+        border: 1px solid var(--bdr);
+        background: var(--surf2);
+        margin-bottom: 7px;
+        gap: 8px;
+        flex-wrap: wrap;
+      }
+      .exam-row-pass {
+        border-color: var(--ok);
+        background: var(--ok-bg);
+      }
+      .exam-row-fail {
+        border-color: var(--err);
+        background: var(--err-bg);
+      }
+
       /* Auth */
       .overlay {
         position: fixed;
@@ -5232,6 +5457,7 @@
     </style>
   </head>
   <body>
+    <!-- Auth -->
     <div class="overlay" id="authOverlay">
       <div class="modal">
         <h2>&#128274; AWS AI Quiz</h2>
@@ -5267,24 +5493,41 @@
       </div>
     </div>
 
+    <!-- Header -->
     <div class="hdr" id="hdrEl" style="display: none">
-      <div class="logo">AWS <em>AI</em></div>
-      <div class="hdr-mid">
+      <div class="hdr-logo">AWS <em>AI</em></div>
+      <div class="hdr-sync">
         <span class="sync-dot dot-wait" id="syncDot"></span>
-        <span class="sync-txt" id="syncTxt">&#8230;</span>
+        <span class="sync-lbl" id="syncTxt">&#8230;</span>
       </div>
-      <div class="hdr-right">
-        <select
-          class="sel-try"
-          id="trySel"
-          onchange="switchTry(this.value)"
-        ></select>
-        <button class="btn" onclick="setView('stats')">&#128202;</button>
-        <button class="btn" onclick="setView('focus')">&#127919;</button>
-        <button class="btn" onclick="setView('sync')">&#128279;</button>
-        <button class="btn btn-pri" onclick="newTry()">+Try</button>
+      <div class="hdr-try">
+        <button class="try-btn" id="tryBtn" onclick="toggleTryMenu()">
+          Try 1
+        </button>
+      </div>
+      <div class="hdr-actions">
+        <button
+          class="hbtn hbtn-exam"
+          onclick="setView('examSetup')"
+          title="Mock Exam"
+        >
+          &#127891;
+        </button>
+        <button class="hbtn" onclick="setView('stats')" title="Stats">
+          &#128202;
+        </button>
+        <button class="hbtn" onclick="setView('focus')" title="Focus">
+          &#127919;
+        </button>
+        <button class="hbtn" onclick="setView('sync')" title="Account">
+          &#128279;
+        </button>
+        <button class="hbtn hbtn-pri" onclick="newTry()">+Try</button>
       </div>
     </div>
+
+    <!-- Try dropdown -->
+    <div class="try-dropdown" id="tryDropdown"></div>
 
     <div class="main" id="main">
       <div class="empty">
@@ -5306,15 +5549,57 @@
         USERNAME = null,
         saveTimer = null,
         AUTH_MODE = "signin";
+      var examInterval = null;
 
-      function fakeEmail(u) {
-        return (
-          u
-            .trim()
-            .toLowerCase()
-            .replace(/[^a-z0-9_-]/g, "_") + "@awsquiz.app"
-        );
+      // Close try dropdown on outside click
+      document.addEventListener("click", function (e) {
+        var dd = document.getElementById("tryDropdown");
+        var btn = document.getElementById("tryBtn");
+        if (dd && btn && !dd.contains(e.target) && !btn.contains(e.target)) {
+          dd.classList.remove("open");
+        }
+      });
+
+      function toggleTryMenu() {
+        var dd = document.getElementById("tryDropdown");
+        if (!dd) return;
+        if (dd.classList.contains("open")) {
+          dd.classList.remove("open");
+          return;
+        }
+        var mt = maxT();
+        var h = "";
+        for (var i = 1; i <= mt; i++) {
+          var st = getStats(i);
+          h +=
+            '<div class="try-option' +
+            (i === S.activeTry ? " active" : "") +
+            '" onclick="switchTry(' +
+            i +
+            ');toggleTryMenu()">Try ' +
+            i +
+            ' &nbsp;<span style="color:var(--muted);font-size:12px">' +
+            st.answered +
+            "/" +
+            QS.length +
+            " answered (" +
+            st.pct +
+            "%)</span></div>";
+        }
+        h +=
+          '<div class="try-option" onclick="newTry();toggleTryMenu()" style="color:var(--acc);font-weight:700">+ Start new try</div>';
+        dd.innerHTML = h;
+        dd.classList.add("open");
       }
+
+      function updTryBtn() {
+        var btn = document.getElementById("tryBtn");
+        if (!btn) return;
+        var st = getStats(S.activeTry);
+        btn.textContent =
+          "Try " + S.activeTry + " (" + st.answered + "/" + QS.length + ")";
+      }
+
       function setSS(ok, msg) {
         var d = document.getElementById("syncDot"),
           t = document.getElementById("syncTxt");
@@ -5363,31 +5648,30 @@
         var btn = document.getElementById("authBtn");
         btn.disabled = true;
         btn.textContent = "Please wait\u2026";
+        var email =
+          u.toLowerCase().replace(/[^a-z0-9_-]/g, "_") + "@awsquiz.app";
         try {
           var res;
           if (AUTH_MODE === "signup") {
-            res = await SB.auth.signUp({ email: fakeEmail(u), password: p });
+            res = await SB.auth.signUp({ email: email, password: p });
             if (res.error) throw res.error;
             if (!res.data.session) {
               res = await SB.auth.signInWithPassword({
-                email: fakeEmail(u),
+                email: email,
                 password: p,
               });
               if (res.error) throw res.error;
             }
           } else {
             res = await SB.auth.signInWithPassword({
-              email: fakeEmail(u),
+              email: email,
               password: p,
             });
             if (res.error) {
-              var msg = res.error.message;
-              if (
-                msg.includes("Invalid login") ||
-                msg.includes("invalid_grant")
-              )
-                msg = "Wrong username or password.";
-              throw new Error(msg);
+              var m2 = res.error.message;
+              if (m2.includes("Invalid login") || m2.includes("invalid_grant"))
+                m2 = "Wrong username or password.";
+              throw new Error(m2);
             }
           }
           USERID = res.data.user.id;
@@ -5405,6 +5689,7 @@
       }
 
       async function signOut() {
+        if (examInterval) clearInterval(examInterval);
         await SB.auth.signOut();
         USERID = null;
         USERNAME = null;
@@ -5435,7 +5720,7 @@
             break;
           }
         }
-        updSel();
+        updTryBtn();
         render();
       }
       async function load() {
@@ -5448,6 +5733,7 @@
           if (r.data && r.data.data) {
             S.tries = r.data.data.tries || [];
             S.activeTry = r.data.data.activeTry || 1;
+            S.exams = r.data.data.exams || [];
           }
           setSS(true, "synced \u2713");
         } catch (e) {
@@ -5460,7 +5746,7 @@
         try {
           var r = await SB.from("quiz_progress").upsert({
             user_id: USERID,
-            data: { tries: S.tries, activeTry: S.activeTry },
+            data: { tries: S.tries, activeTry: S.activeTry, exams: S.exams },
             updated_at: new Date().toISOString(),
           });
           if (r.error) throw r.error;
@@ -5475,6 +5761,7 @@
         saveTimer = setTimeout(dbsave, 900);
       }
 
+      // ── State ──────────────────────────────────────────────────────────────────
       function mkS() {
         return {
           idx: 0,
@@ -5491,6 +5778,17 @@
           cache: {},
           focusFilter: "all",
           focusSort: "miss",
+          exams: [],
+          // Retry mode
+          retryMode: false,
+          retryQueue: [],
+          retryIdx: 0,
+          retrySel: null,
+          retryMatchSel: {},
+          retryOrderItems: null,
+          retryRevealed: false,
+          // Exam
+          exam: null,
         };
       }
       var S = mkS();
@@ -5509,7 +5807,6 @@
         }
         return t;
       }
-
       function getStats(tn) {
         var t = S.tries.find(function (t) {
           return t.tryNum === tn;
@@ -5530,7 +5827,6 @@
           pct: a ? Math.round((ok / a) * 100) : 0,
         };
       }
-
       function isOK(q, ans) {
         if (q.type === "single")
           return Array.isArray(ans)
@@ -5554,7 +5850,6 @@
           );
         return false;
       }
-
       function maxT() {
         return Math.max.apply(
           null,
@@ -5565,23 +5860,9 @@
             .concat([1]),
         );
       }
-      function updSel() {
-        var el = document.getElementById("trySel");
-        if (!el) return;
-        var mt = maxT();
-        el.innerHTML = "";
-        for (var i = 1; i <= mt; i++) {
-          var o = document.createElement("option"),
-            st = getStats(i);
-          o.value = i;
-          o.textContent =
-            "Try " + i + " (" + st.answered + "/" + QS.length + ")";
-          if (i === S.activeTry) o.selected = true;
-          el.appendChild(o);
-        }
-      }
       function switchTry(v) {
         S.activeTry = parseInt(v);
+        S.retryMode = false;
         var td = getTD();
         S.idx = 0;
         for (var i = 0; i < QS.length; i++) {
@@ -5592,23 +5873,27 @@
         }
         rst();
         sched();
+        updTryBtn();
         render();
       }
       function newTry() {
         S.activeTry = maxT() + 1;
         S.idx = 0;
         S.view = "quiz";
+        S.retryMode = false;
         rst();
         sched();
-        updSel();
+        updTryBtn();
         render();
       }
       function setView(v) {
         S.view = v;
+        S.retryMode = false;
         render();
       }
       function goTo(idx) {
         S.idx = idx;
+        S.retryMode = false;
         rst();
         render();
       }
@@ -5635,6 +5920,71 @@
         }
       }
 
+      // ── Retry mode ─────────────────────────────────────────────────────────────
+      // Enter retry: give queue of question indices from focus/stats
+      function startRetry(queueIdxs) {
+        if (!queueIdxs || !queueIdxs.length) return;
+        S.retryMode = true;
+        S.retryQueue = queueIdxs;
+        S.retryIdx = 0;
+        S.retrySel = null;
+        S.retryMatchSel = {};
+        S.retryOrderItems = null;
+        S.retryRevealed = false;
+        var q = QS[queueIdxs[0]];
+        if (q && q.type === "ordering") S.retryOrderItems = q.items.slice();
+        S.view = "quiz";
+        render();
+      }
+
+      function retrySubmit() {
+        var qi = S.retryQueue[S.retryIdx];
+        var q = QS[qi];
+        var ans = null;
+        if (q.type === "single" || q.type === "multi") {
+          if (!S.retrySel || (Array.isArray(S.retrySel) && !S.retrySel.length))
+            return;
+          ans = S.retrySel;
+        } else if (q.type === "matching") {
+          if (Object.keys(S.retryMatchSel).length < q.pairs.length) return;
+          ans = JSON.parse(JSON.stringify(S.retryMatchSel));
+        } else if (q.type === "ordering") {
+          ans = S.retryOrderItems.slice();
+        }
+        S.retryRevealed = true;
+        render();
+      }
+
+      function retryNext() {
+        S.retryIdx++;
+        if (S.retryIdx >= S.retryQueue.length) {
+          S.retryMode = false;
+          setView("focus");
+          return;
+        }
+        var q = QS[S.retryQueue[S.retryIdx]];
+        S.retrySel = null;
+        S.retryMatchSel = {};
+        S.retryOrderItems = null;
+        S.retryRevealed = false;
+        if (q && q.type === "ordering") S.retryOrderItems = q.items.slice();
+        render();
+      }
+
+      function canRetrySubmit(q) {
+        if (q.type === "single") return !!S.retrySel;
+        if (q.type === "multi")
+          return Array.isArray(S.retrySel) && S.retrySel.length > 0;
+        if (q.type === "matching")
+          return Object.keys(S.retryMatchSel).length === q.pairs.length;
+        if (q.type === "ordering")
+          return (
+            !!S.retryOrderItems && S.retryOrderItems.length === q.items.length
+          );
+        return false;
+      }
+
+      // ── Submit (normal study) ──────────────────────────────────────────────────
       function submit() {
         var q = QS[S.idx];
         if (S.revealed) return;
@@ -5650,6 +6000,7 @@
         }
         getTD().answers[q.id] = ans;
         sched();
+        updTryBtn();
         S.revealed = true;
         S.loading = true;
         render();
@@ -5745,6 +6096,155 @@
         render();
       }
 
+      // ── Mock exam ──────────────────────────────────────────────────────────────
+      var EXAM_SECS = 5400; // 90 minutes
+
+      function buildExamQuestions() {
+        var targets = { single: 58, multi: 2, matching: 4, ordering: 1 };
+        var result = [];
+        Object.keys(targets).forEach(function (t) {
+          var pool = QS.filter(function (q) {
+            return q.type === t;
+          }).slice();
+          pool.sort(function () {
+            return Math.random() - 0.5;
+          });
+          result = result.concat(pool.slice(0, targets[t]));
+        });
+        result.sort(function () {
+          return Math.random() - 0.5;
+        });
+        return result;
+      }
+
+      function startExam() {
+        if (examInterval) clearInterval(examInterval);
+        var qs = buildExamQuestions();
+        S.exam = {
+          questions: qs,
+          answers: {},
+          flagged: {},
+          idx: 0,
+          startTime: Date.now(),
+          submitted: false,
+          sel: null,
+          matchSel: {},
+          orderItems:
+            qs[0] && qs[0].type === "ordering" ? qs[0].items.slice() : null,
+        };
+        S.view = "exam";
+        render();
+        examInterval = setInterval(tickExamTimer, 1000);
+      }
+
+      function tickExamTimer() {
+        if (!S.exam || S.exam.submitted) {
+          clearInterval(examInterval);
+          return;
+        }
+        var elapsed = Math.floor((Date.now() - S.exam.startTime) / 1000);
+        var rem = Math.max(0, EXAM_SECS - elapsed);
+        var el = document.getElementById("examTimerEl");
+        if (el) {
+          var m = Math.floor(rem / 60),
+            s = rem % 60;
+          el.textContent = m + ":" + (s < 10 ? "0" : "") + s;
+          el.className =
+            "exam-timer" + (rem < 300 ? " crit" : rem < 600 ? " warn" : "");
+        }
+        if (rem === 0) autoSubmitExam();
+      }
+
+      function examGoTo(idx) {
+        saveExamCurrentAnswer();
+        S.exam.idx = idx;
+        var q = S.exam.questions[idx];
+        S.exam.sel = S.exam.answers[q.id] || null;
+        S.exam.matchSel = S.exam.answers[q.id]
+          ? JSON.parse(JSON.stringify(S.exam.answers[q.id]))
+          : {};
+        S.exam.orderItems = S.exam.answers[q.id]
+          ? S.exam.answers[q.id].slice()
+          : q.type === "ordering"
+            ? q.items.slice()
+            : null;
+        render();
+      }
+
+      function saveExamCurrentAnswer() {
+        if (!S.exam || S.exam.submitted) return;
+        var q = S.exam.questions[S.exam.idx];
+        if (!q) return;
+        if (
+          (q.type === "single" || q.type === "multi") &&
+          S.exam.sel &&
+          S.exam.sel.length
+        )
+          S.exam.answers[q.id] = S.exam.sel.slice();
+        else if (
+          q.type === "matching" &&
+          Object.keys(S.exam.matchSel).length === q.pairs.length
+        )
+          S.exam.answers[q.id] = JSON.parse(JSON.stringify(S.exam.matchSel));
+        else if (q.type === "ordering" && S.exam.orderItems)
+          S.exam.answers[q.id] = S.exam.orderItems.slice();
+      }
+
+      function autoSubmitExam() {
+        submitExam(true);
+      }
+
+      function submitExam(auto) {
+        saveExamCurrentAnswer();
+        if (!auto) {
+          var unanswered = S.exam.questions.filter(function (q) {
+            return !S.exam.answers[q.id];
+          }).length;
+          var msg =
+            unanswered > 0
+              ? "You have " +
+                unanswered +
+                " unanswered question" +
+                (unanswered > 1 ? "s" : "") +
+                ". Submit anyway?"
+              : "Submit the exam now?";
+          if (!confirm(msg)) return;
+        }
+        clearInterval(examInterval);
+        S.exam.submitted = true;
+        // Calculate results
+        var correct = 0,
+          total = S.exam.questions.length;
+        S.exam.questions.forEach(function (q) {
+          if (S.exam.answers[q.id] && isOK(q, S.exam.answers[q.id])) correct++;
+        });
+        var elapsed = Math.floor((Date.now() - S.exam.startTime) / 1000);
+        var score = Math.round(100 + (correct / total) * 900);
+        var result = {
+          date: new Date().toLocaleDateString("en-GB"),
+          score: score,
+          passed: score >= 700,
+          correct: correct,
+          total: total,
+          elapsed: elapsed,
+          answers: JSON.parse(JSON.stringify(S.exam.answers)),
+          qids: S.exam.questions.map(function (q) {
+            return q.id;
+          }),
+        };
+        S.exams.push(result);
+        sched();
+        render();
+      }
+
+      function exitExam() {
+        if (!confirm("Exit exam? Your progress will not be saved.")) return;
+        clearInterval(examInterval);
+        S.exam = null;
+        setView("examSetup");
+      }
+
+      // ── Helpers ────────────────────────────────────────────────────────────────
       function esc(s) {
         return String(s || "")
           .replace(/&/g, "&amp;")
@@ -5773,7 +6273,13 @@
           return !!S.orderItems && S.orderItems.length === q.items.length;
         return false;
       }
+      function fmtTime(secs) {
+        var m = Math.floor(secs / 60),
+          s = secs % 60;
+        return m + "m " + (s < 10 ? "0" : "") + s + "s";
+      }
 
+      // ── Render ─────────────────────────────────────────────────────────────────
       function render() {
         var m = document.getElementById("main");
         if (!m || !S.loaded) return;
@@ -5789,9 +6295,22 @@
           rSync(m);
           return;
         }
+        if (S.view === "examSetup") {
+          rExamSetup(m);
+          return;
+        }
+        if (S.view === "exam") {
+          rExam(m);
+          return;
+        }
+        if (S.retryMode) {
+          rRetry(m);
+          return;
+        }
         rQuiz(m);
       }
 
+      // ── Quiz view ──────────────────────────────────────────────────────────────
       function rQuiz(m) {
         var q = QS[S.idx],
           td = getTD(),
@@ -5813,7 +6332,6 @@
           '<div class="prog-bar"><div class="prog-fill" style="width:' +
           pct +
           '%"></div></div></div>';
-
         h +=
           '<div class="nav-bar">' +
           '<div class="nav-prev"><button class="btn-nav"' +
@@ -5821,17 +6339,13 @@
           ' onclick="goTo(' +
           (S.idx - 1) +
           ')">&#8592; Prev</button></div>' +
-          '<div class="nav-stats">' +
-          '<span class="pill pill-ok">&#10003; ' +
+          '<div class="nav-stats"><span class="pill pill-ok">&#10003; ' +
           st.correct +
-          "</span>" +
-          '<span class="pill pill-err">&#10007; ' +
+          '</span><span class="pill pill-err">&#10007; ' +
           st.incorrect +
-          "</span>" +
-          '<span class="pill pill-neu">' +
+          '</span><span class="pill pill-neu">' +
           (QS.length - ansCount) +
-          " left</span>" +
-          "</div>" +
+          " left</span></div>" +
           '<div class="nav-next"><button class="btn-nav ' +
           nCls +
           '"' +
@@ -5917,45 +6431,268 @@
           "</div>";
 
         m.innerHTML = h;
-        if (q.type === "ordering") attachDrag(q);
+        if (q.type === "ordering") attachDrag(q, false);
       }
 
-      /* ── rSingle: .opt has NO child elements. Text is a direct text node.
-   The letter/icon is shown via CSS ::before using data-icon attribute.
-   Changing class (adding .sel, .rev-ok, .rev-wrong) CANNOT affect .opt width. ── */
+      // ── Retry view (active recall: answer before seeing result) ────────────────
+      function rRetry(m) {
+        var qi = S.retryQueue[S.retryIdx];
+        var q = QS[qi];
+        var td = getTD();
+        var origAns = td.answers[q.id];
+
+        var h =
+          '<div class="banner ban-info" style="margin-bottom:14px">' +
+          "&#128260; Retry mode: Q" +
+          (S.retryIdx + 1) +
+          " of " +
+          S.retryQueue.length +
+          ' <button class="btn" style="margin-left:auto" onclick="S.retryMode=false;setView(\'focus\')">Exit retry</button>' +
+          "</div>";
+
+        h +=
+          '<div class="card"><div class="qnum">Q' +
+          q.id +
+          " " +
+          badge(q.type) +
+          '<span style="color:var(--muted);font-size:10px;font-weight:400">Try again without seeing the answer</span></div>' +
+          '<div class="stem">' +
+          esc(q.stem) +
+          "</div>";
+
+        if (!S.retryRevealed) {
+          // Show fresh — no previous state visible
+          if (q.type === "single") h += rRetryOpts(q);
+          else if (q.type === "multi") h += rRetryMultiOpts(q);
+          else if (q.type === "matching") h += rRetryMatchOpts(q);
+          else if (q.type === "ordering") h += rRetryOrderOpts(q);
+          h += "</div>";
+          h +=
+            '<button class="btn-acc" onclick="retrySubmit()"' +
+            (canRetrySubmit(q) ? "" : " disabled") +
+            ">Check my answer</button>";
+        } else {
+          // Show result comparison
+          var ra =
+            S.retrySel ||
+            (q.type === "matching"
+              ? S.retryMatchSel
+              : q.type === "ordering"
+                ? S.retryOrderItems
+                : null);
+          var retryOK = isOK(q, ra);
+
+          // Show options locked with colours
+          if (q.type === "single") {
+            var rawR = S.retrySel;
+            var uaR = Array.isArray(rawR) ? rawR[0] : rawR;
+            h += rLockedOpts(q, uaR);
+          } else if (q.type === "multi") {
+            h += rLockedMultiOpts(q, S.retrySel || []);
+          } else if (q.type === "matching")
+            h += rMatch(q, true, S.retryMatchSel);
+          else if (q.type === "ordering")
+            h += rOrder(q, true, S.retryOrderItems);
+          h += "</div>";
+
+          // Result banner with comparison
+          if (retryOK) {
+            h +=
+              '<div class="banner ban-ok">&#10003; Retry correct! Great recall.</div>';
+          } else {
+            var origDA = Array.isArray(origAns)
+              ? origAns.join(", ")
+              : String(origAns || "?");
+            var retDA = Array.isArray(ra) ? ra.join(", ") : String(ra || "?");
+            h +=
+              '<div class="banner ban-err">&#10007; Retry wrong. <br><span style="font-size:12px;font-weight:400">Your retry: <strong>' +
+              esc(retDA) +
+              "</strong> &middot; Your original: <strong>" +
+              esc(origDA) +
+              "</strong> &middot; Correct: <strong>" +
+              esc(q.correct.join ? q.correct.join(", ") : q.correct) +
+              "</strong></span></div>";
+          }
+
+          var isLast = S.retryIdx >= S.retryQueue.length - 1;
+          h +=
+            '<button class="btn-acc" onclick="retryNext()">' +
+            (isLast ? "Finish retry" : "Next question &#8594;") +
+            "</button>";
+        }
+
+        m.innerHTML = h;
+        if (q.type === "ordering" && !S.retryRevealed) attachDrag(q, true);
+      }
+
+      // Retry option renderers (no locked classes, no prev state)
+      function rRetryOpts(q) {
+        var sel = S.retrySel;
+        var ua = Array.isArray(sel) ? sel[0] : sel || null;
+        var h = "";
+        Object.entries(q.options).forEach(function (kv) {
+          var L = kv[0],
+            cls = "opt" + (L === ua ? " sel" : "");
+          h +=
+            '<div class="' +
+            cls +
+            '" data-icon="' +
+            L +
+            '" onclick="S.retrySel=[\'' +
+            qa(L) +
+            "'];render()\">" +
+            esc(kv[1]) +
+            "</div>";
+        });
+        return h;
+      }
+      function rRetryMultiOpts(q) {
+        var ua = Array.isArray(S.retrySel) ? S.retrySel : [];
+        var n = q.correct.length;
+        var h =
+          '<div class="mhint">Select <strong>' +
+          n +
+          "</strong> answer" +
+          (n > 1 ? "s" : "") +
+          "</div>";
+        Object.entries(q.options).forEach(function (kv) {
+          var L = kv[0],
+            cls = "opt" + (ua.includes(L) ? " sel" : ""),
+            icon = ua.includes(L) ? "&#10003;" : L;
+          h +=
+            '<div class="' +
+            cls +
+            '" data-icon="' +
+            icon +
+            '" onclick="var a=S.retrySel?S.retrySel.slice():[];var i=a.indexOf(\'' +
+            qa(L) +
+            "');if(i>=0)a.splice(i,1);else a.push('" +
+            qa(L) +
+            "');S.retrySel=a;render()\">" +
+            esc(kv[1]) +
+            "</div>";
+        });
+        return h;
+      }
+      function rRetryMatchOpts(q) {
+        var us = S.retryMatchSel,
+          h = '<table class="mtbl">';
+        q.pairs.forEach(function (p, i) {
+          var ch = us[i] || "";
+          h +=
+            '<tr><td class="mdesc">' +
+            esc(p.description) +
+            '</td><td class="mico"></td>' +
+            '<td class="msel"><select onchange="S.retryMatchSel[' +
+            i +
+            ']=this.value;render()">' +
+            '<option value="">Select&#8230;</option>' +
+            q.options
+              .map(function (o) {
+                return (
+                  '<option value="' +
+                  qa(o) +
+                  '"' +
+                  (ch === o ? " selected" : "") +
+                  ">" +
+                  esc(o) +
+                  "</option>"
+                );
+              })
+              .join("") +
+            "</select></td></tr>";
+        });
+        return h + "</table>";
+      }
+      function rRetryOrderOpts(q) {
+        var items = S.retryOrderItems || q.items.slice(),
+          h = '<ul class="olist" id="OL">';
+        items.forEach(function (item, i) {
+          h +=
+            '<li class="oitem" draggable="true" data-i="' +
+            i +
+            '"><div class="onum">' +
+            (i + 1) +
+            '</div><div class="ogrip">&#10240; </div><div class="otxt2">' +
+            esc(item) +
+            "</div></li>";
+        });
+        return (
+          h +
+          '</ul><p style="font-size:12px;color:var(--muted);margin-top:8px;text-align:center">Drag items into the correct order</p>'
+        );
+      }
+      function rLockedOpts(q, ua) {
+        var h = "";
+        Object.entries(q.options).forEach(function (kv) {
+          var L = kv[0],
+            cls = "opt";
+          if (L === q.correct[0]) cls += " rev-ok";
+          else if (L === ua) cls += " rev-wrong";
+          else cls += " rev-skip";
+          h +=
+            '<div class="' +
+            cls +
+            '" data-icon="' +
+            L +
+            '">' +
+            esc(kv[1]) +
+            "</div>";
+        });
+        return h;
+      }
+      function rLockedMultiOpts(q, ua) {
+        var n = q.correct.length,
+          h =
+            '<div class="mhint">Select <strong>' +
+            n +
+            "</strong> answer" +
+            (n > 1 ? "s" : "") +
+            "</div>";
+        Object.entries(q.options).forEach(function (kv) {
+          var L = kv[0],
+            cls = "opt";
+          if (q.correct.includes(L)) cls += " rev-ok";
+          else if (ua.includes(L)) cls += " rev-wrong";
+          else cls += " rev-skip";
+          h +=
+            '<div class="' +
+            cls +
+            '" data-icon="' +
+            L +
+            '">' +
+            esc(kv[1]) +
+            "</div>";
+        });
+        return h;
+      }
+
+      // Standard option renderers (study mode)
       function rSingle(q, locked, prevAns) {
         var raw = prevAns || S.sel;
         var ua = Array.isArray(raw) ? raw[0] : raw || null;
         var h = "";
         Object.entries(q.options).forEach(function (kv) {
           var L = kv[0],
-            t = kv[1],
             cls = "opt";
           if (locked) {
             if (L === q.correct[0]) cls += " rev-ok";
             else if (L === ua) cls += " rev-wrong";
             else cls += " rev-skip";
-          } else {
-            if (L === ua) cls += " sel";
-          }
+          } else if (L === ua) cls += " sel";
           h +=
             '<div class="' +
             cls +
             '" data-icon="' +
             L +
             '"' +
-            (locked ? " class-locked" : " onclick=\"pickS('" + qa(L) + "')\"") +
+            (locked ? "" : " onclick=\"S.sel=['" + qa(L) + "']; render()\"") +
             ">" +
-            esc(t) +
+            esc(kv[1]) +
             "</div>";
         });
         return h;
       }
-      function pickS(L) {
-        S.sel = [L];
-        render();
-      }
-
       function rMulti(q, locked, prevAns) {
         var ua = prevAns || (Array.isArray(S.sel) ? S.sel : []);
         var n = q.correct.length;
@@ -5967,13 +6704,16 @@
           "</div>";
         Object.entries(q.options).forEach(function (kv) {
           var L = kv[0],
-            t = kv[1],
             cls = "opt",
             icon = L;
           if (locked) {
-            if (q.correct.includes(L)) cls += " rev-ok";
-            else if (ua.includes(L)) cls += " rev-wrong";
-            else cls += " rev-skip";
+            if (q.correct.includes(L)) {
+              cls += " rev-ok";
+            } else if (ua.includes(L)) {
+              cls += " rev-wrong";
+            } else {
+              cls += " rev-skip";
+            }
           } else if (ua.includes(L)) {
             cls += " sel";
             icon = "&#10003;";
@@ -5984,21 +6724,19 @@
             '" data-icon="' +
             icon +
             '"' +
-            (locked ? " class-locked" : " onclick=\"pickM('" + qa(L) + "')\"") +
+            (locked
+              ? ""
+              : " onclick=\"var a=Array.isArray(S.sel)?S.sel.slice():[]; var i=a.indexOf('" +
+                qa(L) +
+                "'); if(i>=0)a.splice(i,1); else a.push('" +
+                qa(L) +
+                "'); S.sel=a; render()\"") +
             ">" +
-            esc(t) +
+            esc(kv[1]) +
             "</div>";
         });
         return h;
       }
-      function pickM(L) {
-        if (!Array.isArray(S.sel)) S.sel = [];
-        var i = S.sel.indexOf(L);
-        if (i >= 0) S.sel.splice(i, 1);
-        else S.sel.push(L);
-        render();
-      }
-
       function rMatch(q, locked, prevAns) {
         var us = prevAns || S.matchSel,
           h = '<table class="mtbl">';
@@ -6016,9 +6754,9 @@
             (locked ? (ok ? "ok" : "err") : "") +
             '"' +
             (locked ? " disabled" : "") +
-            ' onchange="pickMatch(' +
+            ' onchange="S.matchSel[' +
             i +
-            ',this.value)">' +
+            ']=this.value;render()">' +
             '<option value="">Select&#8230;</option>' +
             q.options
               .map(function (o) {
@@ -6042,11 +6780,6 @@
         });
         return h + "</table>";
       }
-      function pickMatch(i, v) {
-        S.matchSel[i] = v;
-        render();
-      }
-
       function rOrder(q, locked, prevAns) {
         var items = prevAns || S.orderItems || q.items.slice(),
           h = '<ul class="olist" id="OL">';
@@ -6061,13 +6794,11 @@
             (locked ? "false" : "true") +
             '" data-i="' +
             i +
-            '">' +
-            '<div class="onum">' +
+            '"><div class="onum">' +
             (i + 1) +
             '</div><div class="ogrip">' +
             (locked ? "" : "&#10240; ") +
-            "</div>" +
-            '<div class="otxt2">' +
+            '</div><div class="otxt2">' +
             esc(item) +
             "</div>" +
             (locked && !ok
@@ -6086,7 +6817,7 @@
         );
       }
 
-      function attachDrag(q) {
+      function attachDrag(q, isRetry) {
         var list = document.getElementById("OL");
         if (!list) return;
         var dragIdx = null;
@@ -6110,10 +6841,12 @@
             li.classList.remove("drag-over");
             var to = +li.dataset.i;
             if (dragIdx === null || dragIdx === to) return;
-            var arr = S.orderItems.slice(),
+            var ref = isRetry ? S.retryOrderItems : S.orderItems;
+            var arr = ref.slice(),
               item = arr.splice(dragIdx, 1)[0];
             arr.splice(to, 0, item);
-            S.orderItems = arr;
+            if (isRetry) S.retryOrderItems = arr;
+            else S.orderItems = arr;
             render();
           });
         });
@@ -6179,6 +6912,422 @@
         return h + "</div>";
       }
 
+      // ── Exam view ──────────────────────────────────────────────────────────────
+      function rExam(m) {
+        if (!S.exam) {
+          m.innerHTML = '<div class="empty">No exam.</div>';
+          return;
+        }
+        if (S.exam.submitted) {
+          rExamResults(m);
+          return;
+        }
+        var q = S.exam.questions[S.exam.idx];
+        var elapsed = Math.floor((Date.now() - S.exam.startTime) / 1000);
+        var rem = Math.max(0, EXAM_SECS - elapsed);
+        var remM = Math.floor(rem / 60),
+          remS = rem % 60;
+        var timerCls =
+          "exam-timer" + (rem < 300 ? " crit" : rem < 600 ? " warn" : "");
+        var answered = Object.keys(S.exam.answers).length;
+        var isFlagged = S.exam.flagged[q.id];
+
+        var h =
+          '<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;flex-wrap:wrap">' +
+          '<span style="font-weight:700;color:var(--acc);font-size:13px;flex:1">Mock Exam</span>' +
+          '<span class="' +
+          timerCls +
+          '" id="examTimerEl">' +
+          remM +
+          ":" +
+          (remS < 10 ? "0" : "") +
+          remS +
+          "</span>" +
+          '<span style="font-size:12px;color:var(--muted)">' +
+          answered +
+          "/" +
+          S.exam.questions.length +
+          " answered</span>" +
+          '<button class="flag-btn' +
+          (isFlagged ? " on" : "") +
+          '" onclick="S.exam.flagged[' +
+          q.id +
+          "]=!S.exam.flagged[" +
+          q.id +
+          '];render()">&#128681; ' +
+          (isFlagged ? "Flagged" : "Flag") +
+          "</button>" +
+          '<button class="btn btn-pri" onclick="submitExam(false)">Submit</button>' +
+          '<button class="btn" onclick="exitExam()">&#10005;</button>' +
+          "</div>";
+
+        // Mini question map
+        h += '<div class="exam-qmap">';
+        S.exam.questions.forEach(function (qq, i) {
+          var cls = "eqd";
+          if (i === S.exam.idx) cls += " ecur";
+          else if (S.exam.flagged[qq.id]) cls += " eflag";
+          else if (S.exam.answers[qq.id]) cls += " edone";
+          h +=
+            '<div class="' +
+            cls +
+            '" onclick="examGoTo(' +
+            i +
+            ')" title="Q' +
+            (i + 1) +
+            '">' +
+            (i + 1) +
+            "</div>";
+        });
+        h += "</div>";
+
+        h +=
+          '<div class="card"><div class="qnum">Q' +
+          (S.exam.idx + 1) +
+          " of " +
+          S.exam.questions.length +
+          " " +
+          badge(q.type) +
+          '</div><div class="stem">' +
+          esc(q.stem) +
+          "</div>";
+
+        // Render editable options (no locked state during exam)
+        var ea = S.exam.answers[q.id];
+        if (q.type === "single") {
+          var ua = ea ? ea[0] : null;
+          Object.entries(q.options).forEach(function (kv) {
+            var L = kv[0],
+              cls = "opt" + (L === ua ? " sel" : "");
+            h +=
+              '<div class="' +
+              cls +
+              '" data-icon="' +
+              L +
+              '" onclick="S.exam.sel=[\'' +
+              qa(L) +
+              "']; S.exam.answers[" +
+              q.id +
+              "]=['" +
+              qa(L) +
+              "']; render()\">" +
+              esc(kv[1]) +
+              "</div>";
+          });
+        } else if (q.type === "multi") {
+          var ua2 = ea || S.exam.sel || [];
+          var n = q.correct.length;
+          h +=
+            '<div class="mhint">Select <strong>' +
+            n +
+            "</strong> answer" +
+            (n > 1 ? "s" : "") +
+            "</div>";
+          Object.entries(q.options).forEach(function (kv) {
+            var L = kv[0],
+              cls = "opt" + (ua2.includes(L) ? " sel" : ""),
+              icon = ua2.includes(L) ? "&#10003;" : L;
+            h +=
+              '<div class="' +
+              cls +
+              '" data-icon="' +
+              icon +
+              '" onclick="var a=S.exam.answers[' +
+              q.id +
+              "]?S.exam.answers[" +
+              q.id +
+              "].slice():[]; var i=a.indexOf('" +
+              qa(L) +
+              "'); if(i>=0)a.splice(i,1); else a.push('" +
+              qa(L) +
+              "'); S.exam.answers[" +
+              q.id +
+              ']=a; render()">' +
+              esc(kv[1]) +
+              "</div>";
+          });
+        } else if (q.type === "matching") {
+          var us = ea || S.exam.matchSel;
+          h += '<table class="mtbl">';
+          q.pairs.forEach(function (p, i) {
+            var ch = us && us[i] ? us[i] : "";
+            h +=
+              '<tr><td class="mdesc">' +
+              esc(p.description) +
+              '</td><td class="mico"></td>' +
+              '<td class="msel"><select onchange="if(!S.exam.matchSel)S.exam.matchSel={};S.exam.matchSel[' +
+              i +
+              "]=this.value;if(Object.keys(S.exam.matchSel).length===" +
+              q.pairs.length +
+              ")S.exam.answers[" +
+              q.id +
+              ']=JSON.parse(JSON.stringify(S.exam.matchSel));render()">' +
+              '<option value="">Select&#8230;</option>' +
+              q.options
+                .map(function (o) {
+                  return (
+                    '<option value="' +
+                    qa(o) +
+                    '"' +
+                    (ch === o ? " selected" : "") +
+                    ">" +
+                    esc(o) +
+                    "</option>"
+                  );
+                })
+                .join("") +
+              "</select></td></tr>";
+          });
+          h += "</table>";
+        } else if (q.type === "ordering") {
+          var eitems = ea || S.exam.orderItems || q.items.slice();
+          h += '<ul class="olist" id="OL">';
+          eitems.forEach(function (item, i) {
+            h +=
+              '<li class="oitem" draggable="true" data-i="' +
+              i +
+              '"><div class="onum">' +
+              (i + 1) +
+              '</div><div class="ogrip">&#10240; </div><div class="otxt2">' +
+              esc(item) +
+              "</div></li>";
+          });
+          h +=
+            '</ul><p style="font-size:12px;color:var(--muted);margin-top:8px;text-align:center">Drag items into the correct order</p>';
+        }
+        h += "</div>";
+
+        // Nav
+        h +=
+          '<div class="nav-bar"><div class="nav-prev"><button class="btn-nav"' +
+          (S.exam.idx === 0 ? " disabled" : "") +
+          ' onclick="examGoTo(' +
+          (S.exam.idx - 1) +
+          ')">&#8592; Prev</button></div>' +
+          '<div class="nav-stats"><span style="font-size:12px;color:var(--muted)">Q' +
+          (S.exam.idx + 1) +
+          " / " +
+          S.exam.questions.length +
+          "</span></div>" +
+          '<div class="nav-next"><button class="btn-nav btn-nav-next"' +
+          (S.exam.idx === S.exam.questions.length - 1 ? " disabled" : "") +
+          ' onclick="examGoTo(' +
+          (S.exam.idx + 1) +
+          ')">Next &#8594;</button></div></div>';
+
+        m.innerHTML = h;
+        if (q.type === "ordering") {
+          // Attach drag for exam ordering
+          var list = document.getElementById("OL");
+          if (list) {
+            var dragIdx = null;
+            list.querySelectorAll("li").forEach(function (li) {
+              li.addEventListener("dragstart", function () {
+                dragIdx = +li.dataset.i;
+                li.classList.add("dragging");
+              });
+              li.addEventListener("dragend", function () {
+                li.classList.remove("dragging");
+              });
+              li.addEventListener("dragover", function (e) {
+                e.preventDefault();
+                li.classList.add("drag-over");
+              });
+              li.addEventListener("dragleave", function () {
+                li.classList.remove("drag-over");
+              });
+              li.addEventListener("drop", function (e) {
+                e.preventDefault();
+                li.classList.remove("drag-over");
+                var to = +li.dataset.i;
+                if (dragIdx === null || dragIdx === to) return;
+                S.exam.orderItems = S.exam.orderItems || q.items.slice();
+                var arr = S.exam.orderItems.slice(),
+                  item = arr.splice(dragIdx, 1)[0];
+                arr.splice(to, 0, item);
+                S.exam.orderItems = arr;
+                S.exam.answers[q.id] = arr.slice();
+                render();
+              });
+            });
+          }
+        }
+      }
+
+      function rExamResults(m) {
+        var res = S.exams[S.exams.length - 1];
+        if (!res) return;
+        var pct = Math.round((res.correct / res.total) * 100);
+
+        var h =
+          '<div style="text-align:center;padding:20px 0 14px">' +
+          '<div class="score-circle ' +
+          (res.passed ? "pass" : "fail") +
+          '">' +
+          '<div class="score-num" style="color:' +
+          (res.passed ? "var(--ok)" : "var(--err)") +
+          '">' +
+          res.score +
+          "</div>" +
+          '<div class="score-sub">/ 1000</div>' +
+          "</div>" +
+          '<div style="font-size:20px;font-weight:700;color:' +
+          (res.passed ? "var(--ok-txt)" : "var(--err-txt)") +
+          ';">' +
+          (res.passed ? "&#127881; PASS" : "&#128546; FAIL") +
+          "</div>" +
+          '<div style="font-size:13px;color:var(--muted);margin-top:4px">Pass score: 700 &middot; ' +
+          (res.passed
+            ? "Congratulations!"
+            : "Keep studying — you've got this!") +
+          "</div>" +
+          "</div>";
+        h +=
+          '<div class="sg"><div class="sc"><div class="sn sn-ok">' +
+          res.correct +
+          '</div><div class="sl">Correct</div></div>' +
+          '<div class="sc"><div class="sn sn-err">' +
+          (res.total - res.correct) +
+          '</div><div class="sl">Wrong</div></div>' +
+          '<div class="sc"><div class="sn">' +
+          pct +
+          '%</div><div class="sl">Accuracy</div></div>' +
+          '<div class="sc"><div class="sn">' +
+          fmtTime(res.elapsed) +
+          '</div><div class="sl">Time used</div></div>' +
+          '<div class="sc"><div class="sn">' +
+          Math.floor((EXAM_SECS - res.elapsed) / 60) +
+          'm</div><div class="sl">Time left</div></div>' +
+          "</div>";
+
+        // Review map
+        h += '<div class="h2">Review answers</div><div class="exam-qmap">';
+        S.exam.questions.forEach(function (qq, i) {
+          var a = S.exam.answers[qq.id];
+          var cls = "eqd " + (a ? (isOK(qq, a) ? "eok" : "eerr") : "");
+          h +=
+            '<div class="' +
+            cls +
+            '" onclick="rExamReview(' +
+            i +
+            ')" title="Q' +
+            (i + 1) +
+            '">' +
+            (i + 1) +
+            "</div>";
+        });
+        h += '</div><div id="examReviewSlot"></div>';
+        h +=
+          '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px">' +
+          '<button class="btn btn-pri" onclick="S.exam=null;setView(\'examSetup\')">&#127891; New exam</button>' +
+          '<button class="btn" onclick="S.exam=null;setView(\'quiz\')">&#128221; Back to study</button>' +
+          "</div>";
+
+        m.innerHTML = h;
+      }
+
+      function rExamReview(i) {
+        var q = S.exam.questions[i];
+        var a = S.exam.answers[q.id];
+        var ok = a ? isOK(q, a) : false;
+        var slot = document.getElementById("examReviewSlot");
+        if (!slot) return;
+        var h =
+          '<div class="card" style="border-color:' +
+          (ok ? "var(--ok)" : "var(--err)") +
+          '"><div class="qnum">Exam Q' +
+          (i + 1) +
+          " (Q" +
+          q.id +
+          ") " +
+          badge(q.type) +
+          '</div><div class="stem">' +
+          esc(q.stem) +
+          "</div>";
+        var ua =
+          a || (q.type === "matching" ? {} : q.type === "ordering" ? [] : null);
+        var uaL =
+          Array.isArray(ua) && q.type === "single"
+            ? ua[0]
+            : Array.isArray(ua)
+              ? ua
+              : ua;
+        if (q.type === "single")
+          h += rLockedOpts(q, Array.isArray(ua) ? ua[0] : ua);
+        else if (q.type === "multi")
+          h += rLockedMultiOpts(q, Array.isArray(ua) ? ua : []);
+        else if (q.type === "matching") h += rMatch(q, true, ua);
+        else if (q.type === "ordering") h += rOrder(q, true, ua);
+        h += "</div>";
+        if (!a) h += '<div class="banner ban-err">&#10007; Not answered</div>';
+        else if (ok) h += '<div class="banner ban-ok">&#10003; Correct!</div>';
+        else {
+          var da = Array.isArray(ua) ? ua.join(", ") : String(ua || "?");
+          h +=
+            '<div class="banner ban-err">&#10007; You chose: <strong>' +
+            esc(da) +
+            "</strong> &middot; Correct: <strong>" +
+            esc(q.correct.join ? q.correct.join(", ") : q.correct) +
+            "</strong></div>";
+        }
+        slot.innerHTML = h;
+        slot.scrollIntoView({ behavior: "smooth", block: "nearest" });
+      }
+
+      // ── Exam setup view ────────────────────────────────────────────────────────
+      function rExamSetup(m) {
+        var h = tabs("examSetup") + '<div class="h2">&#127891; Mock Exam</div>';
+        h +=
+          '<div class="try-sec">' +
+          '<div class="sg">' +
+          '<div class="sc"><div class="sn">65</div><div class="sl">Questions</div></div>' +
+          '<div class="sc"><div class="sn">90</div><div class="sl">Minutes</div></div>' +
+          '<div class="sc"><div class="sn" style="font-size:16px">700/1000</div><div class="sl">Pass score</div></div>' +
+          '<div class="sc"><div class="sn">~67%</div><div class="sl">Correct to pass</div></div>' +
+          "</div>" +
+          '<p style="font-size:13px;color:var(--muted);line-height:1.6;margin-bottom:8px">Questions are randomly drawn proportionally: 58 single choice, 2 multiple choice, 4 matching, 1 ordering.</p>' +
+          '<p style="font-size:13px;color:var(--muted);line-height:1.6;margin-bottom:14px">You can navigate between questions and flag them for review. The exam auto-submits when time runs out.</p>' +
+          '<button class="btn-acc" onclick="startExam()">Start Mock Exam &#8594;</button>' +
+          "</div>";
+
+        if (S.exams && S.exams.length) {
+          h += '<div class="h2" style="margin-top:18px">Past Attempts</div>';
+          var list = S.exams.slice().reverse();
+          list.forEach(function (e, i) {
+            var pct = Math.round((e.correct / e.total) * 100);
+            h +=
+              '<div class="exam-row ' +
+              (e.passed ? "exam-row-pass" : "exam-row-fail") +
+              '">' +
+              '<span style="font-weight:700">' +
+              (list.length - i) +
+              ". " +
+              e.date +
+              "</span>" +
+              '<span style="font-size:13px">' +
+              e.correct +
+              "/" +
+              e.total +
+              " correct (" +
+              pct +
+              "%)</span>" +
+              '<span style="font-size:13px">' +
+              fmtTime(e.elapsed) +
+              " used</span>" +
+              '<span style="font-weight:700;font-size:15px;color:' +
+              (e.passed ? "var(--ok-txt)" : "var(--err-txt)") +
+              '">' +
+              e.score +
+              " &nbsp;" +
+              (e.passed ? "&#10003; PASS" : "&#10007; FAIL") +
+              "</span>" +
+              "</div>";
+          });
+        }
+        m.innerHTML = h;
+      }
+
+      // ── Stats ──────────────────────────────────────────────────────────────────
       function rStats(m) {
         var mt = maxT(),
           h = tabs("stats");
@@ -6255,6 +7404,7 @@
         m.innerHTML = h;
       }
 
+      // ── Focus ──────────────────────────────────────────────────────────────────
       function rFocus(m) {
         var mt = maxT(),
           h = tabs("focus");
@@ -6335,6 +7485,8 @@
             h + '<div class="empty">No questions match this filter.</div>';
           return;
         }
+
+        // Practice button — starts retry mode with wrong questions
         var mi = fl
           .filter(function (x) {
             return x.wr > 0;
@@ -6342,15 +7494,17 @@
           .map(function (x) {
             return x.qi;
           });
-        if (mi.length)
+        if (mi.length) {
           h +=
-            '<button class="btn-warn" style="margin-bottom:12px" onclick="goTo(' +
-            mi[0] +
-            ");setView('quiz')\">&#128260; Practice " +
+            '<button class="btn-retry" onclick="startRetry(' +
+            JSON.stringify(mi) +
+            ')">&#128260; Practice ' +
             mi.length +
             " missed question" +
             (mi.length > 1 ? "s" : "") +
-            "</button>";
+            " (active recall)</button>";
+        }
+
         h +=
           '<div style="overflow-x:auto"><table class="ftbl"><thead><tr><th>Q#</th><th>Type</th><th>Tries</th><th>Performance</th><th></th></tr></thead><tbody>';
         fl.forEach(function (x) {
@@ -6370,15 +7524,14 @@
               ? Math.round((x.cor / (x.cor + x.wr)) * 100)
               : null;
           h +=
-            '<tr onclick="goTo(' +
-            x.qi +
-            ');setView(\'quiz\')" style="cursor:pointer"><td><strong>Q' +
+            "<tr><td><strong>Q" +
             x.qq.id +
             "</strong></td><td>" +
             badge(x.qq.type) +
             "</td><td>" +
             dots +
-            "</td><td>" +
+            "</td>" +
+            "<td>" +
             (x.wr > 0
               ? '<span style="color:var(--err-txt);font-weight:700">' +
                 x.wr +
@@ -6388,20 +7541,23 @@
               : '<span style="color:var(--ok-txt)">' +
                 (x.cor > 0 ? "All correct" : "Not tried") +
                 "</span>") +
-            '</td><td><button class="btn" onclick="event.stopPropagation();goTo(' +
+            "</td>" +
+            '<td><button class="btn" onclick="startRetry([' +
             x.qi +
-            ");setView('quiz')\">Review &#8594;</button></td></tr>";
+            '])">Retry &#8594;</button></td></tr>';
         });
         h += "</tbody></table></div>";
         m.innerHTML = h;
       }
 
+      // ── Sync / Account ─────────────────────────────────────────────────────────
       function rSync(m) {
         m.innerHTML =
           tabs("sync") +
           '<div class="h2">Account</div><div class="try-sec"><p style="font-size:14px;margin-bottom:4px">Signed in as <strong>' +
           esc(USERNAME || "?") +
-          '</strong></p><p style="font-size:13px;color:var(--muted);margin-bottom:14px;line-height:1.6">Progress syncs automatically. On any new device: open the app and sign in with the same username and password.</p><button class="btn" onclick="signOut()">Sign out</button></div>';
+          '</strong></p><p style="font-size:13px;color:var(--muted);margin-bottom:14px;line-height:1.6">Progress syncs automatically. On any new device: open the app and sign in with the same username and password.</p><button class="btn" onclick="signOut()">Sign out</button></div>' +
+          '<div class="try-sec"><p style="font-size:13px;font-weight:700;margin-bottom:8px">&#127979; About active recall</p><p style="font-size:13px;color:var(--muted);line-height:1.7">The most evidence-based learning method is <strong>active recall</strong> — forcing yourself to retrieve an answer from memory before seeing it. This is why the Practice button in Focus makes you answer each question <em>fresh</em> before revealing the result. Research shows this builds stronger memory traces than re-reading correct answers. Combine it with <strong>spaced repetition</strong>: practice your missed questions the next day, then 3 days later, then a week. The Focus tab already sorts by most-missed to prioritise your weakest areas.</p></div>';
       }
 
       function tabs(active) {
@@ -6409,6 +7565,7 @@
           ["quiz", "&#128221; Study"],
           ["stats", "&#128202; Stats"],
           ["focus", "&#127919; Focus"],
+          ["examSetup", "&#127891; Exam"],
           ["sync", "&#128279; Account"],
         ];
         var h = '<div class="vtabs">';
@@ -6425,6 +7582,7 @@
         return h + "</div>";
       }
 
+      // ── Boot ───────────────────────────────────────────────────────────────────
       (async function boot() {
         SB = supabase.createClient(SB_URL, SB_KEY);
         try {
