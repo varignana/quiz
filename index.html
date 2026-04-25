@@ -420,6 +420,7 @@ async function startApp(){
   updTryBtn();render();
 }
 async function load(){
+  // Load user progress
   try{
     var r=await SB.from('quiz_progress').select('data').eq('user_id',USERID).single();
     if(r.error&&r.error.code!=='PGRST116')throw r.error;
@@ -428,15 +429,51 @@ async function load(){
       S.activeTry=r.data.data.activeTry||1;
       S.exams=r.data.data.exams||[];
     }
-    setSS(true,'synced \u2713');
-  }catch(e){console.warn(e);setSS(false,'offline');}
+    setSS(true,'synced ✓');
+  }catch(e){console.warn('progress load:',e);setSS(false,'offline');}
+
+  // Load shared explanations + corrections (available to ALL users/devices)
+  try{
+    var rc=await SB.from('quiz_content').select('key,data').in('key',['explanations','corrections']);
+    if(!rc.error&&rc.data){
+      rc.data.forEach(function(row){
+        if(row.key==='explanations'){
+          var exp=row.data||{};
+          Object.keys(exp).forEach(function(k){
+            var id=parseInt(k);
+            S.explanations[id]=exp[k];
+            S.cache[id]=exp[k];
+          });
+        }
+        if(row.key==='corrections'){
+          S.corrections=row.data||{};
+        }
+      });
+    }
+  }catch(e){console.warn('content load:',e);}
 }
 async function dbsave(){
   if(!SB||!USERID)return;
+  // Save user progress
   try{
     var r=await SB.from('quiz_progress').upsert({user_id:USERID,data:{tries:S.tries,activeTry:S.activeTry,exams:S.exams},updated_at:new Date().toISOString()});
-    if(r.error)throw r.error;setSS(true,'saved \u2713');
+    if(r.error)throw r.error;
+    setSS(true,'saved ✓');
   }catch(e){setSS(false,'save failed');}
+}
+
+async function saveContent(){
+  // Save shared explanations+corrections (admin action)
+  if(!SB)return;
+  try{
+    var expObj={};
+    Object.keys(S.explanations).forEach(function(k){expObj[k]=S.explanations[k];});
+    await SB.from('quiz_content').upsert([
+      {key:'explanations',data:expObj,updated_at:new Date().toISOString()},
+      {key:'corrections', data:S.corrections,updated_at:new Date().toISOString()}
+    ]);
+    return true;
+  }catch(e){console.error('saveContent:',e);return false;}
 }
 function sched(){clearTimeout(saveTimer);setSS(true,'saving\u2026');saveTimer=setTimeout(dbsave,900);}
 
@@ -449,8 +486,9 @@ function mkS(){return{idx:0,sel:null,matchSel:{},orderItems:null,revealed:false,
   retryRevealed:false,
   // Exam
   exam:null,
-  explanations:{}
-};}
+  explanations:{},
+  adminMode:false,
+  corrections:{}};}
 var S=mkS();
 
 function getTD(){
@@ -695,7 +733,10 @@ function rQuiz(m){
 
   if(!q){m.innerHTML=h+'<div class="empty">No question.</div>';return;}
 
-  h+='<div class="card"><div class="qnum">Q'+q.id+' '+badge(q.type)+'</div><div class="stem">'+esc(q.stem)+'</div>';
+  var q=getQ(QS[S.idx]);
+  h+='<div class="card">';
+  h+='<div class="qnum">Q'+q.id+' '+badge(q.type)+(S.adminMode?' <button class="btn" style="margin-left:auto;font-size:11px;padding:3px 8px;color:var(--acc);border-color:var(--acc)" onclick="openEditModal('+q.id+')">&#9999; Edit</button>':'')+'</div>';
+  h+='<div class="stem">'+esc(q.stem)+'</div>';
   if(q.type==='single')h+=rSingle(q,locked,td.answers[q.id]);
   else if(q.type==='multi')h+=rMulti(q,locked,td.answers[q.id]);
   else if(q.type==='matching')h+=rMatch(q,locked,td.answers[q.id]);
@@ -1229,10 +1270,18 @@ function handleImportFile(input) {
       if (skipped > 0) msg += ' ' + skipped + ' questions still have no explanation (fill them and re-upload).';
       if (msgEl) {
         msgEl.style.color = 'var(--ok-txt)';
-        msgEl.textContent = '✓ ' + msg;
+        msgEl.textContent = '✓ Saving to cloud…';
       }
-      // Re-render sync view to update counter
-      setView('sync');
+      // Save to Supabase so it persists for ALL devices
+      saveContent().then(function(ok){
+        if (msgEl) {
+          msgEl.style.color = ok ? 'var(--ok-txt)' : 'var(--warn-txt)';
+          msgEl.textContent = ok
+            ? '✓ ' + msg + ' Saved to cloud — visible on all devices.'
+            : '⚠️ Loaded locally but cloud save failed. Try again.';
+        }
+        setView('sync');
+      });
     } catch(e) {
       if (msgEl) {
         msgEl.style.color = 'var(--err-txt)';
@@ -1270,6 +1319,20 @@ function rSync(m) {
   var acc = document.createElement('div');
   acc.className = 'h2';
   acc.textContent = 'Account';
+  var adminRow = document.createElement('div');
+  adminRow.style.marginTop = '10px';
+  var adminBtn = document.createElement('button');
+  adminBtn.className = 'btn' + (S.adminMode ? ' btn-pri' : '');
+  adminBtn.innerHTML = S.adminMode ? '&#128275; Admin mode ON — click to exit' : '&#128272; Admin mode';
+  adminBtn.onclick = toggleAdmin;
+  adminRow.appendChild(adminBtn);
+  if (S.adminMode) {
+    var aNote = document.createElement('span');
+    aNote.style.cssText = 'font-size:12px;color:var(--acc);margin-left:10px;font-weight:700';
+    aNote.textContent = 'Edit buttons now visible on every question';
+    adminRow.appendChild(aNote);
+  }
+  root.appendChild(adminRow);
   root.appendChild(acc);
 
   var accCard = document.createElement('div');
@@ -1404,6 +1467,212 @@ function tabs(active){
 }
 
 // ── Boot ───────────────────────────────────────────────────────────────────
+
+
+// ── ADMIN MODE ──────────────────────────────────────────────────────────────
+var ADMIN_PWD = 'awsquiz2025'; // change this if you want
+
+function toggleAdmin() {
+  if (S.adminMode) {
+    S.adminMode = false;
+    render();
+    return;
+  }
+  var pwd = prompt('Enter admin password:');
+  if (pwd === ADMIN_PWD) {
+    S.adminMode = true;
+    alert('Admin mode ON. Edit buttons now appear on each question.');
+    render();
+  } else if (pwd !== null) {
+    alert('Wrong password.');
+  }
+}
+
+// Get corrected version of a question (admin edits override original data)
+function getQ(q) {
+  var c = S.corrections[q.id];
+  if (!c) return q;
+  var out = Object.assign({}, q);
+  if (c.stem)    out.stem = c.stem;
+  if (c.options) out.options = Object.assign({}, q.options, c.options);
+  return out;
+}
+
+// ── Admin edit modal ─────────────────────────────────────────────────────────
+function openEditModal(qid) {
+  var orig = QS.find(function(q){ return q.id === qid; });
+  if (!orig) return;
+  var q    = getQ(orig);
+  var corr = S.corrections[qid] || {};
+  var exp  = S.explanations[qid] || {};
+
+  // Remove any existing modal
+  var existing = document.getElementById('adminModal');
+  if (existing) existing.remove();
+
+  var overlay = document.createElement('div');
+  overlay.id = 'adminModal';
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:200;display:flex;align-items:flex-start;justify-content:center;padding:16px;overflow-y:auto';
+
+  var modal = document.createElement('div');
+  modal.style.cssText = 'background:var(--surf);border-radius:10px;padding:22px;max-width:640px;width:100%;border:1px solid var(--bdr2);margin-top:20px';
+
+  // Header
+  var hdr = document.createElement('div');
+  hdr.style.cssText = 'display:flex;align-items:center;justify-content:space-between;margin-bottom:16px';
+  hdr.innerHTML = '<strong style="font-size:15px">✏️ Edit Q' + qid + ' — ' + q.type.toUpperCase() + '</strong>';
+  var closeBtn = document.createElement('button');
+  closeBtn.textContent = '✕ Close';
+  closeBtn.className = 'btn';
+  closeBtn.onclick = function(){ overlay.remove(); };
+  hdr.appendChild(closeBtn);
+  modal.appendChild(hdr);
+
+  function field(label, id, value, big) {
+    var wrap = document.createElement('div');
+    wrap.style.marginBottom = '12px';
+    var lbl = document.createElement('div');
+    lbl.style.cssText = 'font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px';
+    lbl.textContent = label;
+    wrap.appendChild(lbl);
+    var inp = document.createElement(big ? 'textarea' : 'input');
+    inp.id = id;
+    inp.value = value;
+    inp.style.cssText = 'width:100%;border:1px solid var(--bdr2);border-radius:var(--rs);background:var(--surf2);color:var(--text);padding:8px 10px;font-size:13px;font-family:inherit;resize:vertical';
+    if (big) { inp.rows = 3; }
+    wrap.appendChild(inp);
+    return wrap;
+  }
+
+  // Stem
+  modal.appendChild(field('Question Text (stem)', 'ed_stem', q.stem, true));
+
+  // Options
+  if (q.options && typeof q.options === 'object') {
+    var optHdr = document.createElement('div');
+    optHdr.style.cssText = 'font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px';
+    optHdr.textContent = 'Answer Options';
+    modal.appendChild(optHdr);
+    Object.keys(q.options).forEach(function(k) {
+      var isCorrect = orig.correct && orig.correct.includes(k);
+      modal.appendChild(field(k + (isCorrect ? ' ✓ CORRECT' : ''), 'ed_opt_' + k, q.options[k], false));
+    });
+  }
+
+  // Explanation section
+  var expHdr = document.createElement('div');
+  expHdr.style.cssText = 'font-size:12px;font-weight:700;margin:14px 0 8px;padding-top:12px;border-top:1px solid var(--bdr)';
+  expHdr.textContent = '💡 Explanation';
+  modal.appendChild(expHdr);
+
+  modal.appendChild(field('Concept (key idea)', 'ed_exp_concept', exp.concept || '', false));
+
+  if (q.type === 'single' || q.type === 'multi') {
+    Object.keys(q.options || {}).forEach(function(k) {
+      var e = exp[k] || {};
+      modal.appendChild(field(k + ' — explanation (why right or wrong)', 'ed_exp_' + k, e.why || '', true));
+    });
+  } else if (q.type === 'matching') {
+    (exp.explanations || []).forEach(function(e, i) {
+      modal.appendChild(field('Match ' + (i+1) + ' explanation', 'ed_exp_match_' + i, e.why || '', false));
+    });
+    if (!(exp.explanations||[]).length) {
+      var note = document.createElement('p');
+      note.style.cssText = 'font-size:12px;color:var(--muted)';
+      note.textContent = 'Upload explanations via JSON first to enable inline editing for matching questions.';
+      modal.appendChild(note);
+    }
+  } else if (q.type === 'ordering') {
+    (exp.steps || []).forEach(function(s, i) {
+      modal.appendChild(field('Step ' + (i+1) + ' explanation', 'ed_exp_step_' + i, s.why || '', false));
+    });
+  }
+
+  // Save button
+  var saveBtn = document.createElement('button');
+  saveBtn.className = 'btn-acc';
+  saveBtn.textContent = '💾 Save changes to cloud';
+  saveBtn.style.marginTop = '16px';
+  saveBtn.onclick = function() { saveEditModal(qid, orig, exp); };
+  modal.appendChild(saveBtn);
+
+  var statusDiv = document.createElement('div');
+  statusDiv.id = 'editStatus';
+  statusDiv.style.cssText = 'margin-top:10px;font-size:13px;min-height:18px';
+  modal.appendChild(statusDiv);
+
+  overlay.appendChild(modal);
+  // Click outside to close
+  overlay.onclick = function(e) { if (e.target === overlay) overlay.remove(); };
+  document.body.appendChild(overlay);
+}
+
+async function saveEditModal(qid, orig, oldExp) {
+  var statusEl = document.getElementById('editStatus');
+  if (statusEl) { statusEl.textContent = 'Saving\u2026'; statusEl.style.color = 'var(--muted)'; }
+
+  // Collect corrections (question text + options)
+  var c = {};
+  var stemEl = document.getElementById('ed_stem');
+  if (stemEl && stemEl.value !== orig.stem) c.stem = stemEl.value;
+
+  if (orig.options && typeof orig.options === 'object') {
+    var optCorr = {};
+    Object.keys(orig.options).forEach(function(k) {
+      var el = document.getElementById('ed_opt_' + k);
+      if (el && el.value !== orig.options[k]) optCorr[k] = el.value;
+    });
+    if (Object.keys(optCorr).length) c.options = optCorr;
+  }
+
+  if (Object.keys(c).length) {
+    S.corrections[qid] = Object.assign(S.corrections[qid] || {}, c);
+  }
+
+  // Collect explanation
+  var conceptEl = document.getElementById('ed_exp_concept');
+  var concept = conceptEl ? conceptEl.value.trim() : (oldExp.concept || '');
+
+  var newExp = Object.assign({}, oldExp);
+  newExp.concept = concept;
+
+  if (orig.type === 'single' || orig.type === 'multi') {
+    Object.keys(orig.options || {}).forEach(function(k) {
+      var el = document.getElementById('ed_exp_' + k);
+      if (el) {
+        newExp[k] = newExp[k] || {};
+        newExp[k].why = el.value;
+        newExp[k].ok  = orig.correct && orig.correct.includes(k);
+      }
+    });
+  } else if (orig.type === 'matching') {
+    (oldExp.explanations || []).forEach(function(e, i) {
+      var el = document.getElementById('ed_exp_match_' + i);
+      if (el) { newExp.explanations[i] = Object.assign({}, e, {why: el.value}); }
+    });
+  } else if (orig.type === 'ordering') {
+    (oldExp.steps || []).forEach(function(s, i) {
+      var el = document.getElementById('ed_exp_step_' + i);
+      if (el) { newExp.steps[i] = Object.assign({}, s, {why: el.value}); }
+    });
+  }
+
+  if (concept || Object.keys(newExp).length > 1) {
+    S.explanations[qid] = newExp;
+    S.cache[qid] = newExp;
+  }
+
+  var ok = await saveContent();
+  if (statusEl) {
+    statusEl.style.color = ok ? 'var(--ok-txt)' : 'var(--err-txt)';
+    statusEl.textContent = ok
+      ? '\u2713 Saved! Changes are now live for all users and devices.'
+      : '\u2717 Cloud save failed. Check connection and try again.';
+  }
+  // Update the live question text if we have corrections
+  if (S.corrections[qid]) render();
+}
+
 
 (async function boot(){
   SB=supabase.createClient(SB_URL,SB_KEY);
