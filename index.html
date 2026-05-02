@@ -456,9 +456,9 @@ async function load(){
     setSS(true,'synced ✓');
   }catch(e){console.warn('progress load:',e);setSS(false,'offline');}
 
-  // Load shared explanations + corrections (available to ALL users/devices)
+  // Load shared explanations + corrections + custom questions
   try{
-    var rc=await SB.from('quiz_content').select('key,data').in('key',['explanations','corrections']);
+    var rc=await SB.from('quiz_content').select('key,data').in('key',['explanations','corrections','custom_questions']);
     if(!rc.error&&rc.data){
       rc.data.forEach(function(row){
         if(row.key==='explanations'){
@@ -471,6 +471,22 @@ async function load(){
         }
         if(row.key==='corrections'){
           S.corrections=row.data||{};
+        }
+        if(row.key==='custom_questions'){
+          var cqs=row.data||[];
+          if(cqs.length){
+            // Merge custom questions into QS (avoid duplicates by id)
+            var existingIds=new Set(QS.map(function(q){return q.id;}));
+            cqs.forEach(function(q){
+              if(!existingIds.has(q.id)){QS.push(q);existingIds.add(q.id);}
+              else{
+                // Update existing if it came from custom (overwrite)
+                var idx=QS.findIndex(function(qq){return qq.id===q.id;});
+                if(idx>=0)QS[idx]=q;
+              }
+            });
+            QS.sort(function(a,b){return a.id-b.id;});
+          }
         }
       });
     }
@@ -487,14 +503,18 @@ async function dbsave(){
 }
 
 async function saveContent(){
-  // Save shared explanations+corrections (admin action)
+  // Save shared explanations+corrections+custom_questions (admin action)
   if(!SB)return;
   try{
     var expObj={};
     Object.keys(S.explanations).forEach(function(k){expObj[k]=S.explanations[k];});
+    // Collect custom questions (those not in the original static set)
+    var staticIds=new Set(JSON.parse(document.getElementById('qdata').textContent).map(function(q){return q.id;}));
+    var customQs=QS.filter(function(q){return !staticIds.has(q.id);});
     await SB.from('quiz_content').upsert([
-      {key:'explanations',data:expObj,updated_at:new Date().toISOString()},
-      {key:'corrections', data:S.corrections,updated_at:new Date().toISOString()}
+      {key:'explanations',    data:expObj,   updated_at:new Date().toISOString()},
+      {key:'corrections',     data:S.corrections, updated_at:new Date().toISOString()},
+      {key:'custom_questions',data:customQs, updated_at:new Date().toISOString()}
     ]);
     return true;
   }catch(e){console.error('saveContent:',e);return false;}
@@ -1384,6 +1404,28 @@ function triggerImport() {
   if (inp) inp.click();
 }
 
+function validateQuestion(q) {
+  // Returns null if valid, or an error string
+  if (!q || typeof q !== 'object') return 'not an object';
+  if (!q.id || typeof q.id !== 'number') return 'missing numeric id';
+  if (!q.stem || typeof q.stem !== 'string') return 'missing stem (question text)';
+  var validTypes = ['single','multi','ordering','matching'];
+  if (!q.type || !validTypes.includes(q.type)) return 'type must be one of: '+validTypes.join(', ');
+  if (q.type === 'single' || q.type === 'multi') {
+    if (!q.options || typeof q.options !== 'object') return 'missing options object (e.g. {"A":"...","B":"..."})';
+    if (!q.correct || !Array.isArray(q.correct) || !q.correct.length) return 'missing correct array (e.g. ["A"])';
+  }
+  if (q.type === 'ordering') {
+    if (!q.items || !Array.isArray(q.items) || q.items.length < 2) return 'ordering needs items array with 2+ strings';
+    if (!q.correct || !Array.isArray(q.correct)) return 'ordering needs correct array (ordered items)';
+  }
+  if (q.type === 'matching') {
+    if (!q.options || !Array.isArray(q.options)) return 'matching needs options array of strings';
+    if (!q.pairs || !Array.isArray(q.pairs) || !q.pairs.length) return 'matching needs pairs array';
+  }
+  return null;
+}
+
 function handleImportFile(input) {
   var file = input.files[0];
   if (!file) return;
@@ -1395,43 +1437,77 @@ function handleImportFile(input) {
       var questions = Array.isArray(raw) ? raw : (raw.questions || []);
       if (!questions.length) throw new Error('No questions array found in file');
 
-      var loaded = 0, skipped = 0, reasons = [];
+      var newQs=[], updatedQs=[], expLoaded=0, skipped=[], errors=[];
+      var existingIds = new Set(QS.map(function(q){return q.id;}));
+
       questions.forEach(function(q) {
-        if (!q || !q.id) { skipped++; reasons.push('missing id'); return; }
-        if (!q.explanation) { skipped++; return; } // null = not yet filled, skip silently
-        if (typeof q.explanation !== 'object') { skipped++; reasons.push('Q'+q.id+': explanation not object'); return; }
-        S.explanations[q.id] = q.explanation;
-        S.cache[q.id] = q.explanation;
-        loaded++;
+        if (!q || !q.id) { errors.push('item missing id'); return; }
+
+        // Handle explanation updates on existing questions
+        if (q.explanation && typeof q.explanation === 'object') {
+          S.explanations[q.id] = q.explanation;
+          S.cache[q.id] = q.explanation;
+          expLoaded++;
+        }
+
+        // Handle question upsert (new question or update)
+        if (q.stem && q.type) {
+          var err = validateQuestion(q);
+          if (err) { errors.push('Q'+q.id+': '+err); return; }
+          // Build clean question object
+          var cleanQ = {id:q.id, type:q.type, stem:q.stem};
+          if (q.options) cleanQ.options = q.options;
+          if (q.correct) cleanQ.correct = q.correct;
+          if (q.items)   cleanQ.items   = q.items;
+          if (q.pairs)   cleanQ.pairs   = q.pairs;
+
+          if (existingIds.has(q.id)) {
+            // Update existing
+            var idx = QS.findIndex(function(qq){return qq.id===q.id;});
+            if (idx >= 0) { QS[idx] = cleanQ; updatedQs.push(q.id); }
+          } else {
+            // New question
+            QS.push(cleanQ);
+            existingIds.add(q.id);
+            newQs.push(q.id);
+          }
+        } else if (!q.explanation) {
+          skipped.push('Q'+q.id+' (no stem/type or explanation)');
+        }
       });
 
-      var msg = loaded + ' explanations loaded.';
-      if (skipped > 0) msg += ' ' + skipped + ' questions still have no explanation (fill them and re-upload).';
-      if (msgEl) {
-        msgEl.style.color = 'var(--ok-txt)';
-        msgEl.textContent = '✓ Saving to cloud…';
-      }
-      // Save to Supabase so it persists for ALL devices
+      // Re-sort QS by id
+      QS.sort(function(a,b){return a.id-b.id;});
+
+      // Build summary message
+      var parts = [];
+      if (newQs.length)     parts.push(newQs.length+' new question'+(newQs.length>1?'s':'')+' added (IDs: '+newQs.join(', ')+')');
+      if (updatedQs.length) parts.push(updatedQs.length+' question'+(updatedQs.length>1?'s':'')+' updated');
+      if (expLoaded)        parts.push(expLoaded+' explanation'+(expLoaded>1?'s':'')+' loaded');
+      if (!parts.length)    throw new Error('Nothing to import. Check your JSON format.');
+
+      var summary = parts.join(', ')+'.';
+      if (errors.length) summary += ' ⚠️ '+errors.length+' error(s): '+errors.slice(0,3).join('; ')+(errors.length>3?'…':'');
+
+      if (msgEl) { msgEl.style.color='var(--ok-txt)'; msgEl.textContent='✓ Saving to cloud…'; }
+
       saveContent().then(function(ok){
         if (msgEl) {
           msgEl.style.color = ok ? 'var(--ok-txt)' : 'var(--warn-txt)';
           msgEl.textContent = ok
-            ? '✓ ' + msg + ' Saved to cloud — visible on all devices.'
-            : '⚠️ Loaded locally but cloud save failed. Try again.';
+            ? '✓ '+summary+' Saved — visible on all devices.'
+            : '⚠️ Imported locally but cloud save failed. Try again.';
         }
-        setView('sync');
+        render();
       });
     } catch(e) {
-      if (msgEl) {
-        msgEl.style.color = 'var(--err-txt)';
-        msgEl.textContent = '✗ Import failed: ' + e.message;
-      }
+      if (msgEl) { msgEl.style.color='var(--err-txt)'; msgEl.textContent='✗ Import failed: '+e.message; }
     }
     input.value = '';
   };
   reader.onerror = function() {
     var msgEl = document.getElementById('importMsg');
-    if (msgEl) { msgEl.style.color = 'var(--err-txt)'; msgEl.textContent = '✗ Could not read file'; }
+    if (msgEl) { msgEl.style.color='var(--err-txt)'; msgEl.textContent='✗ Could not read file'; }
   };
   reader.readAsText(file);
 }
@@ -1486,33 +1562,39 @@ function rSync(m) {
   accCard.appendChild(signoutBtn);
   root.appendChild(accCard);
 
-  // Explanations section
+  // Explanations / Import section
   var h2 = document.createElement('div');
   h2.className = 'h2';
   h2.style.marginTop = '18px';
-  h2.textContent = '📄 Offline Explanations';
+  h2.innerHTML = '&#128196; Questions &amp; Explanations';
   root.appendChild(h2);
 
   var expCard = document.createElement('div');
   expCard.className = 'try-sec';
 
+  var customCount = (function(){
+    var staticIds=new Set(JSON.parse(document.getElementById('qdata').textContent).map(function(q){return q.id;}));
+    return QS.filter(function(q){return !staticIds.has(q.id);}).length;
+  })();
+
   var intro = document.createElement('p');
   intro.style.cssText = 'font-size:13px;color:var(--muted);line-height:1.7;margin-bottom:12px';
-  intro.innerHTML = 'Explanations are normally generated live via the Anthropic API. '
-    + 'You can pre-fill them offline — no API key needed. '
-    + '<strong>Download</strong> the questions JSON, fill it using any AI (ChatGPT, Gemini, etc.), then <strong>Upload</strong> it back.';
+  intro.innerHTML = 'Upload a JSON file to <strong>add new questions</strong> or <strong>fill explanations</strong>. '
+    + 'Download the current set, edit it (or use an AI to fill explanations), then upload back.';
   expCard.appendChild(intro);
 
   // Status badge
   var status = document.createElement('div');
-  status.style.cssText = 'background:var(--surf2);border-radius:var(--rs);padding:10px 13px;margin-bottom:14px;font-size:13px;line-height:1.5';
+  status.style.cssText = 'background:var(--surf2);border-radius:var(--rs);padding:10px 13px;margin-bottom:14px;font-size:13px;line-height:1.5;display:flex;flex-direction:column;gap:4px';
+  var statusHtml = '';
+  statusHtml += '<span><strong>&#128218; Total questions:</strong> '+QS.length+'</span>';
+  if (customCount > 0) statusHtml += '<span style="color:var(--info-txt)">&#10010; '+customCount+' custom question'+(customCount>1?'s':'')+' (uploaded)</span>';
   if (filled > 0) {
-    status.innerHTML = '<span style="color:var(--ok-txt);font-weight:700">✅ ' + filled + ' / ' + QS.length + ' explanations loaded</span>'
-      + ' — these show instantly without any API call.';
+    statusHtml += '<span style="color:var(--ok-txt)">&#9989; '+filled+' / '+QS.length+' explanations loaded — show instantly, no API needed.</span>';
   } else {
-    status.innerHTML = '<span style="color:var(--muted)">⚠️ No offline explanations loaded.</span>'
-      + ' Download the JSON, fill it with an AI, then upload it back.';
+    statusHtml += '<span style="color:var(--muted)">&#9888;&#65039; No offline explanations. Upload a filled JSON to enable them.</span>';
   }
+  status.innerHTML = statusHtml;
   expCard.appendChild(status);
 
   // Buttons row
@@ -1521,13 +1603,13 @@ function rSync(m) {
 
   var dlBtn = document.createElement('button');
   dlBtn.className = 'btn btn-pri';
-  dlBtn.innerHTML = '⬇ Download questions JSON';
+  dlBtn.innerHTML = '&#11015; Download current JSON';
   dlBtn.onclick = exportJSON;
   btnRow.appendChild(dlBtn);
 
   var ulBtn = document.createElement('button');
   ulBtn.className = 'btn';
-  ulBtn.innerHTML = '⬆ Upload filled JSON';
+  ulBtn.innerHTML = '&#11014; Upload JSON (questions &amp; explanations)';
   ulBtn.onclick = triggerImport;
   btnRow.appendChild(ulBtn);
 
@@ -1561,20 +1643,51 @@ function rSync(m) {
   var h2b = document.createElement('div');
   h2b.className = 'h2';
   h2b.style.marginTop = '14px';
-  h2b.textContent = '🎓 How to fill explanations offline';
+  h2b.innerHTML = '&#128218; How to use Import / Export';
   root.appendChild(h2b);
 
   var howCard = document.createElement('div');
   howCard.className = 'try-sec';
-  howCard.innerHTML = '<ol style="font-size:13px;color:var(--muted);line-height:2;padding-left:20px">'
-    + '<li>Click <strong>Download questions JSON</strong></li>'
-    + '<li>The file contains all ' + QS.length + ' questions. Each has <code style="background:var(--surf2);padding:1px 5px;border-radius:3px">explanation: null</code> for unfilled ones</li>'
-    + '<li>Read the <code>_readme</code> field at the top of the file — it has the exact prompt to give the AI</li>'
-    + '<li>Paste the prompt + a batch of ~40 questions into ChatGPT, Gemini, or any AI</li>'
-    + '<li>Copy the AI response back into the JSON file (replace those questions)</li>'
-    + '<li>Repeat for all batches, then click <strong>Upload filled JSON</strong></li>'
-    + '<li>Done — explanations appear instantly everywhere in the app</li>'
-    + '</ol>';
+  howCard.innerHTML = '<p style="font-size:13px;font-weight:700;margin-bottom:6px;color:var(--text)">Adding new questions:</p>'
+    + '<ol style="font-size:13px;color:var(--muted);line-height:2;padding-left:20px;margin-bottom:14px">'
+    + '<li>Create a JSON file with an array of question objects (see format below)</li>'
+    + '<li>Click <strong>Upload JSON</strong> — new questions are added immediately &amp; synced to cloud</li>'
+    + '<li>Custom questions appear in the quiz alongside built-in ones, sorted by ID</li>'
+    + '</ol>'
+    + '<p style="font-size:13px;font-weight:700;margin-bottom:6px;color:var(--text)">Adding explanations:</p>'
+    + '<ol style="font-size:13px;color:var(--muted);line-height:2;padding-left:20px;margin-bottom:14px">'
+    + '<li>Click <strong>Download JSON</strong> — the file contains all ' + QS.length + ' questions</li>'
+    + '<li>Paste batches of ~40 into ChatGPT/Gemini and ask it to fill the <code style="background:var(--surf2);padding:1px 5px;border-radius:3px">explanation</code> field</li>'
+    + '<li>Upload the filled file — explanations appear instantly, no API call needed</li>'
+    + '</ol>'
+    + '<p style="font-size:13px;font-weight:700;margin-bottom:6px;color:var(--text)">&#128196; Question JSON format:</p>'
+    + '<pre style="font-size:11px;background:var(--surf2);border-radius:var(--rs);padding:12px;overflow-x:auto;line-height:1.6;border:1px solid var(--bdr)">'
+    + '// Single or multi-choice:\n'
+    + '{\n'
+    + '  &quot;id&quot;: 400,\n'
+    + '  &quot;type&quot;: &quot;single&quot;,    // or &quot;multi&quot;\n'
+    + '  &quot;stem&quot;: &quot;Question text here?&quot;,\n'
+    + '  &quot;options&quot;: {&quot;A&quot;: &quot;First option&quot;, &quot;B&quot;: &quot;Second&quot;, &quot;C&quot;: &quot;Third&quot;},\n'
+    + '  &quot;correct&quot;: [&quot;B&quot;]       // array, even for single\n'
+    + '}\n\n'
+    + '// Ordering:\n'
+    + '{\n'
+    + '  &quot;id&quot;: 401, &quot;type&quot;: &quot;ordering&quot;,\n'
+    + '  &quot;stem&quot;: &quot;Put these in order&quot;,\n'
+    + '  &quot;items&quot;: [&quot;Step A&quot;, &quot;Step B&quot;, &quot;Step C&quot;],\n'
+    + '  &quot;correct&quot;: [&quot;Step A&quot;, &quot;Step B&quot;, &quot;Step C&quot;]\n'
+    + '}\n\n'
+    + '// Matching:\n'
+    + '{\n'
+    + '  &quot;id&quot;: 402, &quot;type&quot;: &quot;matching&quot;,\n'
+    + '  &quot;stem&quot;: &quot;Match each item&quot;,\n'
+    + '  &quot;options&quot;: [&quot;Option X&quot;, &quot;Option Y&quot;],\n'
+    + '  &quot;pairs&quot;: [\n'
+    + '    {&quot;description&quot;: &quot;Item 1&quot;, &quot;correct&quot;: &quot;Option X&quot;},\n'
+    + '    {&quot;description&quot;: &quot;Item 2&quot;, &quot;correct&quot;: &quot;Option Y&quot;}\n'
+    + '  ]\n'
+    + '}'
+    + '</pre>';
   root.appendChild(howCard);
 
   // Category management section
