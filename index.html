@@ -278,6 +278,28 @@ input.jmp{border:1px solid var(--bdr2);border-radius:var(--rs);background:var(--
 .minput:focus{outline:none;border-color:var(--acc)}
 .errbox{background:var(--err-bg);color:var(--err-txt);border-radius:var(--rs);padding:9px 12px;font-size:13px;margin-top:9px;display:none;line-height:1.5}
 .link-btn{background:none;border:none;color:var(--acc);cursor:pointer;font-size:13px;padding:0;text-decoration:underline;text-underline-offset:2px}
+
+/* ── Category system ── */
+.cat-bar{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:12px;padding:10px 12px;background:var(--surf);border:1px solid var(--bdr);border-radius:var(--r)}
+.cat-bar-label{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;white-space:nowrap;flex-shrink:0}
+.cat-pill{display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border-radius:99px;font-size:12px;font-weight:600;cursor:pointer;border:1.5px solid var(--bdr2);background:var(--surf2);color:var(--text);transition:all .15s;white-space:nowrap}
+.cat-pill:hover{border-color:var(--acc);color:var(--acc)}
+.cat-pill.active{background:var(--acc);color:#000;border-color:var(--acc)}
+.cat-pill.all-pill.active{background:var(--text);color:var(--surf);border-color:var(--text)}
+.cat-tag{display:inline-flex;align-items:center;gap:3px;padding:2px 8px;border-radius:99px;font-size:11px;font-weight:600;background:var(--info-bg);color:var(--info-txt);border:1px solid var(--info-txt)}
+.cat-tag .rm{cursor:pointer;opacity:.6;font-size:10px;margin-left:1px}
+.cat-tag .rm:hover{opacity:1}
+.cat-panel{background:var(--surf2);border:1.5px solid var(--bdr2);border-radius:var(--r);padding:12px 14px;margin-bottom:10px}
+.cat-panel-title{font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px}
+.cat-input-row{display:flex;gap:6px;margin-bottom:8px}
+.cat-input{flex:1;border:1px solid var(--bdr2);border-radius:var(--rs);background:var(--surf);color:var(--text);padding:6px 9px;font-size:13px;font-family:inherit}
+.cat-input:focus{outline:none;border-color:var(--acc)}
+.cat-existing{display:flex;flex-wrap:wrap;gap:5px;margin-top:6px}
+.cat-existing-btn{padding:3px 10px;border-radius:99px;font-size:12px;font-weight:600;border:1.5px solid var(--bdr2);background:var(--surf);color:var(--text);cursor:pointer}
+.cat-existing-btn:hover{border-color:var(--acc);color:var(--acc)}
+.cat-existing-btn.assigned{background:var(--info-bg);color:var(--info-txt);border-color:var(--info-txt)}
+.rand-btn{display:inline-flex;align-items:center;gap:4px;padding:5px 10px;border-radius:var(--rs);border:1px solid var(--bdr2);background:var(--surf2);color:var(--text);font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap}
+.rand-btn:hover{border-color:var(--acc);color:var(--acc);background:var(--acc-bg)}
 </style>
 </head>
 <body>
@@ -428,6 +450,8 @@ async function load(){
       S.tries=r.data.data.tries||[];
       S.activeTry=r.data.data.activeTry||1;
       S.exams=r.data.data.exams||[];
+      S.categories=r.data.data.categories||{};
+      S.categoryList=r.data.data.categoryList||[];
     }
     setSS(true,'synced ✓');
   }catch(e){console.warn('progress load:',e);setSS(false,'offline');}
@@ -456,7 +480,7 @@ async function dbsave(){
   if(!SB||!USERID)return;
   // Save user progress
   try{
-    var r=await SB.from('quiz_progress').upsert({user_id:USERID,data:{tries:S.tries,activeTry:S.activeTry,exams:S.exams},updated_at:new Date().toISOString()});
+    var r=await SB.from('quiz_progress').upsert({user_id:USERID,data:{tries:S.tries,activeTry:S.activeTry,exams:S.exams,categories:S.categories,categoryList:S.categoryList},updated_at:new Date().toISOString()});
     if(r.error)throw r.error;
     setSS(true,'saved ✓');
   }catch(e){setSS(false,'save failed');}
@@ -488,7 +512,13 @@ function mkS(){return{idx:0,sel:null,matchSel:{},orderItems:null,revealed:false,
   exam:null,
   explanations:{},
   adminMode:false,
-  corrections:{}};}
+  corrections:{},
+  // Categories
+  categories:{},   // qid -> [catName, ...]
+  categoryList:[], // all known category names
+  activeCat:'all', // current filter
+  catPanelOpen:null // qid of open cat panel
+  };}
 var S=mkS();
 
 function getTD(){
@@ -516,7 +546,7 @@ function setView(v){S.view=v;S.retryMode=false;render();}
 function goTo(idx){S.idx=idx;S.retryMode=false;rst();render();}
 
 function rst(){
-  S.sel=null;S.matchSel={};S.orderItems=null;S.revealed=false;S.expl=null;S.loading=false;
+  S.sel=null;S.matchSel={};S.orderItems=null;S.revealed=false;S.expl=null;S.loading=false;S.catPanelOpen=null;
   var q=QS[S.idx];if(!q)return;
   var prev=getTD().answers[q.id];
   if(prev){
@@ -562,6 +592,65 @@ function canRetrySubmit(q){
   if(q.type==='matching')return Object.keys(S.retryMatchSel).length===q.pairs.length;
   if(q.type==='ordering')return !!S.retryOrderItems&&S.retryOrderItems.length===q.items.length;
   return false;
+}
+
+
+// ── Category helpers ───────────────────────────────────────────────────────
+function getCats(qid){return S.categories[qid]||[];}
+function hasCat(qid,cat){return getCats(qid).includes(cat);}
+function addCat(qid,cat){
+  cat=cat.trim();if(!cat)return;
+  if(!S.categories[qid])S.categories[qid]=[];
+  if(!S.categories[qid].includes(cat))S.categories[qid].push(cat);
+  if(!S.categoryList.includes(cat))S.categoryList.push(cat);
+  sched();render();
+}
+function removeCat(qid,cat){
+  if(!S.categories[qid])return;
+  S.categories[qid]=S.categories[qid].filter(function(c){return c!==cat;});
+  if(S.categories[qid].length===0)delete S.categories[qid];
+  sched();render();
+}
+function deleteCat(cat){
+  // Remove from all questions
+  Object.keys(S.categories).forEach(function(qid){
+    S.categories[qid]=S.categories[qid].filter(function(c){return c!==cat;});
+    if(S.categories[qid].length===0)delete S.categories[qid];
+  });
+  S.categoryList=S.categoryList.filter(function(c){return c!==cat;});
+  if(S.activeCat===cat)S.activeCat='all';
+  sched();render();
+}
+function toggleCatPanel(qid){
+  S.catPanelOpen=(S.catPanelOpen===qid)?null:qid;
+  render();
+}
+
+// ── Filtered question list ─────────────────────────────────────────────────
+function getFilteredQS(){
+  if(!S.activeCat||S.activeCat==='all')return QS;
+  return QS.filter(function(q){return hasCat(q.id,S.activeCat);});
+}
+function getFilteredIdx(){
+  var fqs=getFilteredQS();
+  var q=QS[S.idx];
+  var fi=fqs.findIndex(function(qq){return qq.id===q.id;});
+  return{fqs:fqs,fi:fi};
+}
+
+// ── Random unanswered ──────────────────────────────────────────────────────
+function goRandom(){
+  var td=getTD();
+  var fqs=getFilteredQS();
+  var unanswered=fqs.filter(function(q){return !td.answers[q.id];});
+  if(!unanswered.length){
+    // All answered in this filter — just pick any random one
+    unanswered=fqs;
+  }
+  if(!unanswered.length)return;
+  var pick=unanswered[Math.floor(Math.random()*unanswered.length)];
+  var gi=QS.findIndex(function(q){return q.id===pick.id;});
+  if(gi>=0)goTo(gi);
 }
 
 // ── Submit (normal study) ──────────────────────────────────────────────────
@@ -719,23 +808,73 @@ function render(){
 // ── Quiz view ──────────────────────────────────────────────────────────────
 function rQuiz(m){
   var q=QS[S.idx],td=getTD(),st=getStats(S.activeTry);
-  var ansCount=Object.keys(td.answers).length,pct=Math.round((S.idx+1)/QS.length*100);
+  var f=getFilteredIdx(),fqs=f.fqs,fi=f.fi;
+  var totalQ=fqs.length;
+  var ansCount=fqs.filter(function(qq){return td.answers[qq.id];}).length;
+  var unansweredCount=totalQ-ansCount;
+  var pct=totalQ>0?Math.round((fi+1)/totalQ*100):0;
   var isAns=!!td.answers[q?q.id:0],locked=S.revealed||isAns;
   var nCls='btn-nav'+(S.revealed||isAns?' btn-nav-next':'');
+  var prevQ=fi>0?QS.findIndex(function(qq){return qq.id===fqs[fi-1].id;}):null;
+  var nextQ=fi<fqs.length-1?QS.findIndex(function(qq){return qq.id===fqs[fi+1].id;}):null;
 
-  var h='<div class="prog-wrap"><div class="prog-meta"><span>Q <strong>'+(S.idx+1)+'</strong> / '+QS.length+'</span><span>'+ansCount+' answered</span></div>'
-       +'<div class="prog-bar"><div class="prog-fill" style="width:'+pct+'%"></div></div></div>';
+  // Category filter bar
+  var h='';
+  if(S.categoryList&&S.categoryList.length){
+    h+='<div class="cat-bar"><span class="cat-bar-label">&#127991; Filter:</span>';
+    h+='<span class="cat-pill all-pill'+(S.activeCat==='all'?' active':'')+'" onclick="S.activeCat=\'all\';S.idx=0;rst();render()">All ('+QS.length+')</span>';
+    S.categoryList.forEach(function(cat){
+      var cnt=QS.filter(function(qq){return hasCat(qq.id,cat);}).length;
+      h+='<span class="cat-pill'+(S.activeCat===cat?' active':'')+'" onclick="S.activeCat=\''+cat.replace(/'/g,"\'")+'\';;var first=getFilteredQS()[0];if(first){S.idx=QS.findIndex(function(qq){return qq.id===first.id;});}rst();render()">'+esc(cat)+' ('+cnt+')</span>';
+    });
+    h+='</div>';
+  }
+
+  if(!totalQ){
+    m.innerHTML=h+'<div class="empty">No questions in this category yet. Tag some questions with &#127991; to get started!</div>';
+    return;
+  }
+
+  h+='<div class="prog-wrap"><div class="prog-meta"><span>Q <strong>'+(fi+1)+'</strong> / '+totalQ+(S.activeCat!=='all'?' <span style="font-size:10px;color:var(--info-txt)">['+esc(S.activeCat)+']</span>':'')+'</span>'
+     +'<span style="display:flex;align-items:center;gap:6px">'+ansCount+' answered'
+     +'<button class="rand-btn" onclick="goRandom()" title="Jump to random unanswered question">&#127922; Random'+(unansweredCount>0?' ('+unansweredCount+')':'')+'</button>'
+     +'</span></div>'
+     +'<div class="prog-bar"><div class="prog-fill" style="width:'+pct+'%"></div></div></div>';
   h+='<div class="nav-bar">'
-    +'<div class="nav-prev"><button class="btn-nav"'+(S.idx===0?' disabled':'')+' onclick="goTo('+(S.idx-1)+')">&#8592; Prev</button></div>'
-    +'<div class="nav-stats"><span class="pill pill-ok">&#10003; '+st.correct+'</span><span class="pill pill-err">&#10007; '+st.incorrect+'</span><span class="pill pill-neu">'+(QS.length-ansCount)+' left</span></div>'
-    +'<div class="nav-next"><button class="btn-nav '+nCls+'"'+(S.idx===QS.length-1?' disabled':'')+' onclick="goTo('+(S.idx+1)+')">Next &#8594;</button></div>'
+    +'<div class="nav-prev"><button class="btn-nav"'+(fi===0?' disabled':'')+' onclick="goTo('+(prevQ!==null?prevQ:0)+')">&#8592; Prev</button></div>'
+    +'<div class="nav-stats"><span class="pill pill-ok">&#10003; '+st.correct+'</span><span class="pill pill-err">&#10007; '+st.incorrect+'</span><span class="pill pill-neu">'+unansweredCount+' left</span></div>'
+    +'<div class="nav-next"><button class="btn-nav '+nCls+'"'+(fi===fqs.length-1?' disabled':'')+' onclick="goTo('+(nextQ!==null?nextQ:QS.length-1)+')">Next &#8594;</button></div>'
     +'</div>';
 
   if(!q){m.innerHTML=h+'<div class="empty">No question.</div>';return;}
 
   var q=getQ(QS[S.idx]);
   h+='<div class="card">';
-  h+='<div class="qnum">Q'+q.id+' '+badge(q.type)+(S.adminMode?' <button class="btn" style="margin-left:auto;font-size:11px;padding:3px 8px;color:var(--acc);border-color:var(--acc)" onclick="openEditModal('+q.id+')">&#9999; Edit</button>':'')+'</div>';
+  // Category tags for this question
+  var qCats=getCats(q.id);
+  var catTagsHtml=qCats.map(function(c){return '<span class="cat-tag">'+esc(c)+'<span class="rm" onclick="removeCat('+q.id+',\''+c.replace(/'/g,"\'")+'\')" title="Remove">&#215;</span></span>';}).join(' ');
+  h+='<div class="qnum">Q'+q.id+' '+badge(q.type)
+    +' <button class="rand-btn" style="padding:2px 7px;font-size:11px;margin-left:4px;'+(S.catPanelOpen===q.id?'border-color:var(--acc);color:var(--acc);background:var(--acc-bg)':'')+'" onclick="toggleCatPanel('+q.id+')" title="Tag this question with a category">&#127991; Tag'+(qCats.length?' ('+qCats.length+')':'')+'</button>'
+    +(S.adminMode?' <button class="btn" style="margin-left:auto;font-size:11px;padding:3px 8px;color:var(--acc);border-color:var(--acc)" onclick="openEditModal('+q.id+')">&#9999; Edit</button>':'')
+    +'</div>';
+  if(qCats.length)h+='<div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:8px">'+catTagsHtml+'</div>';
+  // Category panel
+  if(S.catPanelOpen===q.id){
+    h+='<div class="cat-panel"><div class="cat-panel-title">&#127991; Add to category</div>'
+      +'<div class="cat-input-row">'
+      +'<input class="cat-input" id="catNewInput" type="text" placeholder="New category name&#8230;" onkeydown="if(event.key===\'Enter\'){var v=document.getElementById(\'catNewInput\').value;addCat('+q.id+',v)}">'
+      +'<button class="btn btn-pri" onclick="var v=document.getElementById(\'catNewInput\').value;addCat('+q.id+',v)">Add</button>'
+      +'</div>';
+    if(S.categoryList.length){
+      h+='<div style="font-size:11px;color:var(--muted);margin-bottom:5px">Existing categories — click to toggle:</div><div class="cat-existing">';
+      S.categoryList.forEach(function(cat){
+        var assigned=hasCat(q.id,cat);
+        h+='<button class="cat-existing-btn'+(assigned?' assigned':'')+'" onclick="'+(assigned?'removeCat':'addCat')+'('+q.id+',\''+cat.replace(/'/g,"\'")+'\')">'+esc(cat)+(assigned?' &#10003;':'')+'</button>';
+      });
+      h+='</div>';
+    }
+    h+='</div>';
+  }
   h+='<div class="stem">'+esc(q.stem)+'</div>';
   if(q.type==='single')h+=rSingle(q,locked,td.answers[q.id]);
   else if(q.type==='multi')h+=rMulti(q,locked,td.answers[q.id]);
@@ -1437,6 +1576,73 @@ function rSync(m) {
     + '<li>Done — explanations appear instantly everywhere in the app</li>'
     + '</ol>';
   root.appendChild(howCard);
+
+  // Category management section
+  var h2cat = document.createElement('div');
+  h2cat.className = 'h2';
+  h2cat.style.marginTop = '14px';
+  h2cat.innerHTML = '&#127991; Category Management';
+  root.appendChild(h2cat);
+
+  var catCard = document.createElement('div');
+  catCard.className = 'try-sec';
+
+  if(S.categoryList && S.categoryList.length){
+    var catIntro = document.createElement('p');
+    catIntro.style.cssText = 'font-size:13px;color:var(--muted);line-height:1.6;margin-bottom:12px';
+    catIntro.textContent = 'Manage your question categories. Click a category to study only those questions.';
+    catCard.appendChild(catIntro);
+
+    var catGrid = document.createElement('div');
+    catGrid.style.cssText = 'display:flex;flex-direction:column;gap:8px';
+
+    S.categoryList.forEach(function(cat){
+      var count = QS.filter(function(q){ return hasCat(q.id, cat); }).length;
+      var row = document.createElement('div');
+      row.style.cssText = 'display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--surf2);border-radius:var(--rs);border:1px solid var(--bdr)';
+
+      var nameSpan = document.createElement('span');
+      nameSpan.style.cssText = 'flex:1;font-size:14px;font-weight:600';
+      nameSpan.textContent = cat;
+
+      var countSpan = document.createElement('span');
+      countSpan.style.cssText = 'font-size:12px;color:var(--muted)';
+      countSpan.textContent = count + ' question' + (count !== 1 ? 's' : '');
+
+      var studyBtn = document.createElement('button');
+      studyBtn.className = 'btn btn-pri';
+      studyBtn.style.fontSize = '12px';
+      studyBtn.innerHTML = '&#128218; Study';
+      studyBtn.onclick = (function(c){ return function(){
+        S.activeCat = c;
+        var first = getFilteredQS()[0];
+        if(first){ S.idx = QS.findIndex(function(qq){ return qq.id === first.id; }); }
+        rst(); setView('quiz');
+      };})(cat);
+
+      var delBtn = document.createElement('button');
+      delBtn.className = 'btn';
+      delBtn.style.cssText = 'color:var(--err-txt);border-color:var(--err);font-size:12px';
+      delBtn.innerHTML = '&#128465;';
+      delBtn.title = 'Delete category';
+      delBtn.onclick = (function(c){ return function(){
+        if(confirm('Delete category "' + c + '"? Questions will be untagged but not deleted.')){ deleteCat(c); }
+      };})(cat);
+
+      row.appendChild(nameSpan);
+      row.appendChild(countSpan);
+      row.appendChild(studyBtn);
+      row.appendChild(delBtn);
+      catGrid.appendChild(row);
+    });
+    catCard.appendChild(catGrid);
+  } else {
+    var noCat = document.createElement('p');
+    noCat.style.cssText = 'font-size:13px;color:var(--muted);line-height:1.6';
+    noCat.innerHTML = 'No categories yet. Tag questions in the <strong>Study</strong> tab using the &#127991; Tag button on any question.';
+    catCard.appendChild(noCat);
+  }
+  root.appendChild(catCard);
 
   // Active recall tip
   var h2c = document.createElement('div');
