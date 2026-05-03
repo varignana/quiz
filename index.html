@@ -300,6 +300,23 @@ input.jmp{border:1px solid var(--bdr2);border-radius:var(--rs);background:var(--
 .cat-existing-btn.assigned{background:var(--info-bg);color:var(--info-txt);border-color:var(--info-txt)}
 .rand-btn{display:inline-flex;align-items:center;gap:4px;padding:5px 10px;border-radius:var(--rs);border:1px solid var(--bdr2);background:var(--surf2);color:var(--text);font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap}
 .rand-btn:hover{border-color:var(--acc);color:var(--acc);background:var(--acc-bg)}
+
+/* ── Bulk label bar ── */
+.bulk-bar{position:sticky;bottom:0;left:0;right:0;background:var(--surf);border-top:2px solid var(--acc);padding:10px 14px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;z-index:50;box-shadow:0 -2px 12px rgba(0,0,0,.18)}
+.bulk-count{font-size:13px;font-weight:700;color:var(--acc);white-space:nowrap}
+.bulk-cat-input{flex:1;min-width:120px;border:1.5px solid var(--bdr2);border-radius:var(--rs);background:var(--surf2);color:var(--text);padding:6px 10px;font-size:13px;font-family:inherit}
+.bulk-cat-input:focus{outline:none;border-color:var(--acc)}
+.bulk-existing{display:flex;flex-wrap:wrap;gap:4px;width:100%}
+.bulk-existing-btn{padding:2px 9px;border-radius:99px;font-size:11px;font-weight:600;border:1.5px solid var(--bdr2);background:var(--surf2);color:var(--text);cursor:pointer}
+.bulk-existing-btn:hover{border-color:var(--acc);color:var(--acc)}
+.ftbl-cb{width:16px;height:16px;cursor:pointer;accent-color:var(--acc)}
+/* ── Add Question modal ── */
+.aq-type-btn{padding:6px 14px;border-radius:var(--rs);border:1.5px solid var(--bdr2);background:var(--surf2);color:var(--muted);font-size:13px;font-weight:600;cursor:pointer}
+.aq-type-btn.active{border-color:var(--acc);background:var(--acc);color:#000}
+.aq-option-row{display:flex;align-items:center;gap:6px;margin-bottom:6px}
+.aq-option-row input[type=checkbox],.aq-option-row input[type=radio]{width:16px;height:16px;accent-color:var(--acc);cursor:pointer;flex-shrink:0}
+.aq-rm-btn{background:none;border:none;color:var(--err-txt);cursor:pointer;font-size:16px;padding:0 2px;line-height:1}
+.aq-add-btn{font-size:12px;color:var(--acc);background:none;border:none;cursor:pointer;padding:2px 4px;font-weight:700}
 </style>
 </head>
 <body>
@@ -671,6 +688,338 @@ function goRandom(){
   var pick=unanswered[Math.floor(Math.random()*unanswered.length)];
   var gi=QS.findIndex(function(q){return q.id===pick.id;});
   if(gi>=0)goTo(gi);
+}
+
+
+// ── Bulk label ─────────────────────────────────────────────────────────────
+function toggleBulkMode(){
+  S.bulkMode=!S.bulkMode;
+  S.bulkSel=new Set();
+  render();
+}
+function toggleBulkQ(qid){
+  if(S.bulkSel.has(qid))S.bulkSel.delete(qid);
+  else S.bulkSel.add(qid);
+  render();
+}
+function selectAllVisible(qids){
+  var allSel=qids.every(function(id){return S.bulkSel.has(id);});
+  if(allSel)qids.forEach(function(id){S.bulkSel.delete(id);});
+  else qids.forEach(function(id){S.bulkSel.add(id);});
+  render();
+}
+function applyBulkCat(cat){
+  cat=(cat||'').trim();
+  if(!cat||!S.bulkSel.size)return;
+  S.bulkSel.forEach(function(qid){addCat(qid,cat);});
+  // addCat calls sched+render, but let's do it once after
+  sched();render();
+}
+function removeBulkCat(cat){
+  if(!cat||!S.bulkSel.size)return;
+  S.bulkSel.forEach(function(qid){removeCat(qid,cat);});
+  sched();render();
+}
+
+// ── Add Question Modal ─────────────────────────────────────────────────────
+function openAddQuestionModal(){
+  var existing=document.getElementById('adminModal');
+  if(existing)existing.remove();
+
+  // Suggest next id
+  var maxId=Math.max.apply(null,QS.map(function(q){return q.id;}));
+  var nextId=maxId+1;
+
+  var state={type:'single',options:[{key:'A',text:'',correct:false},{key:'B',text:'',correct:false},{key:'C',text:'',correct:false},{key:'D',text:'',correct:false}],items:['','',''],stem:''};
+
+  var overlay=document.createElement('div');
+  overlay.id='adminModal';
+  overlay.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:200;display:flex;align-items:flex-start;justify-content:center;padding:16px;overflow-y:auto';
+  overlay.onclick=function(e){if(e.target===overlay)overlay.remove();};
+
+  function rebuild(){
+    overlay.innerHTML='';
+    var modal=document.createElement('div');
+    modal.style.cssText='background:var(--surf);border-radius:10px;padding:22px;max-width:660px;width:100%;border:1px solid var(--bdr2);margin-top:20px';
+
+    // Header
+    var hdr=document.createElement('div');
+    hdr.style.cssText='display:flex;align-items:center;justify-content:space-between;margin-bottom:16px';
+    hdr.innerHTML='<strong style="font-size:16px">&#10010; Add New Question</strong>';
+    var closeBtn=document.createElement('button');
+    closeBtn.className='btn';closeBtn.textContent='✕ Close';
+    closeBtn.onclick=function(){overlay.remove();};
+    hdr.appendChild(closeBtn);
+    modal.appendChild(hdr);
+
+    // ID field
+    var idRow=document.createElement('div');
+    idRow.style.marginBottom='12px';
+    idRow.innerHTML='<div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px">Question ID</div>';
+    var idInp=document.createElement('input');
+    idInp.id='aq_id';idInp.type='number';idInp.value=nextId;
+    idInp.style.cssText='width:120px;border:1px solid var(--bdr2);border-radius:var(--rs);background:var(--surf2);color:var(--text);padding:7px 10px;font-size:13px;font-family:inherit';
+    idRow.appendChild(idInp);
+    modal.appendChild(idRow);
+
+    // Type selector
+    var typeRow=document.createElement('div');
+    typeRow.style.marginBottom='14px';
+    typeRow.innerHTML='<div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px">Question Type</div>';
+    var typeBtns=document.createElement('div');
+    typeBtns.style.cssText='display:flex;gap:6px;flex-wrap:wrap';
+    ['single','multi','ordering','matching'].forEach(function(t){
+      var b=document.createElement('button');
+      b.className='aq-type-btn'+(state.type===t?' active':'');
+      b.textContent={single:'Single choice',multi:'Multi-select',ordering:'Ordering',matching:'Matching'}[t];
+      b.onclick=function(){state.type=t;rebuild();};
+      typeBtns.appendChild(b);
+    });
+    typeRow.appendChild(typeBtns);
+    modal.appendChild(typeRow);
+
+    // Stem
+    var stemWrap=document.createElement('div');
+    stemWrap.style.marginBottom='14px';
+    stemWrap.innerHTML='<div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px">Question Text (stem)</div>';
+    var stemTa=document.createElement('textarea');
+    stemTa.id='aq_stem';stemTa.rows=3;stemTa.value=state.stem;
+    stemTa.placeholder='Type the question here…';
+    stemTa.style.cssText='width:100%;border:1px solid var(--bdr2);border-radius:var(--rs);background:var(--surf2);color:var(--text);padding:8px 10px;font-size:13px;font-family:inherit;resize:vertical';
+    stemTa.oninput=function(){state.stem=this.value;};
+    stemWrap.appendChild(stemTa);
+    modal.appendChild(stemWrap);
+
+    // ── Type-specific fields ────────────────────────────────────────────────
+    if(state.type==='single'||state.type==='multi'){
+      var optHdr=document.createElement('div');
+      optHdr.style.cssText='font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px';
+      optHdr.innerHTML='Answer Options &nbsp;<span style="font-size:10px;font-weight:400">(tick the correct answer'+(state.type==='multi'?'s':'')+')</span>';
+      modal.appendChild(optHdr);
+
+      state.options.forEach(function(opt,i){
+        var row=document.createElement('div');
+        row.className='aq-option-row';
+        var inp=document.createElement('input');
+        inp.type=state.type==='single'?'radio':'checkbox';
+        inp.name='aq_correct';inp.checked=opt.correct;
+        inp.onchange=function(){
+          if(state.type==='single')state.options.forEach(function(o){o.correct=false;});
+          state.options[i].correct=this.checked;
+        };
+        var keyBadge=document.createElement('span');
+        keyBadge.style.cssText='font-size:12px;font-weight:700;min-width:18px;color:var(--muted)';
+        keyBadge.textContent=opt.key;
+        var textInp=document.createElement('input');
+        textInp.type='text';textInp.value=opt.text;textInp.placeholder='Option text…';
+        textInp.style.cssText='flex:1;border:1px solid var(--bdr2);border-radius:var(--rs);background:var(--surf2);color:var(--text);padding:6px 9px;font-size:13px;font-family:inherit';
+        textInp.oninput=function(){state.options[i].text=this.value;};
+        var rmBtn=document.createElement('button');
+        rmBtn.className='aq-rm-btn';rmBtn.textContent='×';rmBtn.title='Remove option';
+        rmBtn.onclick=function(){state.options.splice(i,1);rebuild();};
+        row.appendChild(inp);row.appendChild(keyBadge);row.appendChild(textInp);
+        if(state.options.length>2)row.appendChild(rmBtn);
+        modal.appendChild(row);
+      });
+      var addOptBtn=document.createElement('button');
+      addOptBtn.className='aq-add-btn';
+      addOptBtn.innerHTML='+ Add option';
+      addOptBtn.onclick=function(){
+        var letters='ABCDEFGHIJ';
+        var key=letters[state.options.length]||String(state.options.length+1);
+        state.options.push({key:key,text:'',correct:false});
+        rebuild();
+      };
+      modal.appendChild(addOptBtn);
+    }
+
+    if(state.type==='ordering'){
+      var ordHdr=document.createElement('div');
+      ordHdr.style.cssText='font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin:12px 0 6px';
+      ordHdr.innerHTML='Items <span style="font-size:10px;font-weight:400">(enter in CORRECT order)</span>';
+      modal.appendChild(ordHdr);
+      state.items.forEach(function(item,i){
+        var row=document.createElement('div');
+        row.className='aq-option-row';
+        var num=document.createElement('span');
+        num.style.cssText='font-size:12px;font-weight:700;color:var(--muted);min-width:18px';
+        num.textContent=(i+1)+'.';
+        var inp=document.createElement('input');
+        inp.type='text';inp.value=item;inp.placeholder='Item '+(i+1)+'…';
+        inp.style.cssText='flex:1;border:1px solid var(--bdr2);border-radius:var(--rs);background:var(--surf2);color:var(--text);padding:6px 9px;font-size:13px;font-family:inherit';
+        inp.oninput=function(){state.items[i]=this.value;};
+        var rmBtn=document.createElement('button');
+        rmBtn.className='aq-rm-btn';rmBtn.textContent='×';
+        rmBtn.onclick=function(){state.items.splice(i,1);rebuild();};
+        row.appendChild(num);row.appendChild(inp);
+        if(state.items.length>2)row.appendChild(rmBtn);
+        modal.appendChild(row);
+      });
+      var addItemBtn=document.createElement('button');
+      addItemBtn.className='aq-add-btn';addItemBtn.innerHTML='+ Add item';
+      addItemBtn.onclick=function(){state.items.push('');rebuild();};
+      modal.appendChild(addItemBtn);
+    }
+
+    if(state.type==='matching'){
+      // Options pool (the right-hand labels)
+      var poolHdr=document.createElement('div');
+      poolHdr.style.cssText='font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin:12px 0 4px';
+      poolHdr.innerHTML='Answer Options (pool)';
+      modal.appendChild(poolHdr);
+      if(!state.matchOptions)state.matchOptions=['',''];
+      state.matchOptions.forEach(function(opt,i){
+        var row=document.createElement('div');
+        row.className='aq-option-row';
+        var inp=document.createElement('input');
+        inp.type='text';inp.value=opt;inp.placeholder='Option '+(i+1)+'…';
+        inp.style.cssText='flex:1;border:1px solid var(--bdr2);border-radius:var(--rs);background:var(--surf2);color:var(--text);padding:6px 9px;font-size:13px;font-family:inherit';
+        inp.oninput=function(){state.matchOptions[i]=this.value;};
+        var rmBtn=document.createElement('button');
+        rmBtn.className='aq-rm-btn';rmBtn.textContent='×';
+        rmBtn.onclick=function(){state.matchOptions.splice(i,1);rebuild();};
+        row.appendChild(inp);
+        if(state.matchOptions.length>1)row.appendChild(rmBtn);
+        modal.appendChild(row);
+      });
+      var addPoolBtn=document.createElement('button');
+      addPoolBtn.className='aq-add-btn';addPoolBtn.innerHTML='+ Add option';
+      addPoolBtn.onclick=function(){state.matchOptions.push('');rebuild();};
+      modal.appendChild(addPoolBtn);
+
+      // Pairs
+      var pairsHdr=document.createElement('div');
+      pairsHdr.style.cssText='font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin:12px 0 4px';
+      pairsHdr.innerHTML='Pairs (description → correct option)';
+      modal.appendChild(pairsHdr);
+      if(!state.pairs)state.pairs=[{description:'',correct:''}];
+      state.pairs.forEach(function(pair,i){
+        var row=document.createElement('div');
+        row.className='aq-option-row';
+        row.style.alignItems='flex-start';
+        var desc=document.createElement('input');
+        desc.type='text';desc.value=pair.description;desc.placeholder='Description…';
+        desc.style.cssText='flex:1;border:1px solid var(--bdr2);border-radius:var(--rs);background:var(--surf2);color:var(--text);padding:6px 9px;font-size:13px;font-family:inherit';
+        desc.oninput=function(){state.pairs[i].description=this.value;};
+        var arrow=document.createElement('span');
+        arrow.style.cssText='padding:7px 4px;color:var(--muted);font-size:12px';arrow.textContent='→';
+        var sel=document.createElement('select');
+        sel.style.cssText='border:1px solid var(--bdr2);border-radius:var(--rs);background:var(--surf2);color:var(--text);padding:6px 9px;font-size:13px;font-family:inherit;min-width:100px';
+        (state.matchOptions||[]).forEach(function(o){
+          var opt2=document.createElement('option');
+          opt2.value=o;opt2.textContent=o||'(empty)';
+          if(o===pair.correct)opt2.selected=true;
+          sel.appendChild(opt2);
+        });
+        sel.onchange=function(){state.pairs[i].correct=this.value;};
+        var rmBtn=document.createElement('button');
+        rmBtn.className='aq-rm-btn';rmBtn.textContent='×';
+        rmBtn.onclick=function(){state.pairs.splice(i,1);rebuild();};
+        row.appendChild(desc);row.appendChild(arrow);row.appendChild(sel);
+        if(state.pairs.length>1)row.appendChild(rmBtn);
+        modal.appendChild(row);
+      });
+      var addPairBtn=document.createElement('button');
+      addPairBtn.className='aq-add-btn';addPairBtn.innerHTML='+ Add pair';
+      addPairBtn.onclick=function(){state.pairs.push({description:'',correct:state.matchOptions&&state.matchOptions[0]||''});rebuild();};
+      modal.appendChild(addPairBtn);
+    }
+
+    // Category (optional)
+    var catWrap=document.createElement('div');
+    catWrap.style.cssText='margin-top:14px;padding-top:12px;border-top:1px solid var(--bdr)';
+    catWrap.innerHTML='<div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px">Category (optional)</div>';
+    var catSugg=document.createElement('div');
+    catSugg.style.cssText='display:flex;flex-wrap:wrap;gap:5px;margin-bottom:6px';
+    if(S.categoryList&&S.categoryList.length){
+      S.categoryList.forEach(function(c){
+        var cb=document.createElement('button');
+        cb.className='cat-existing-btn'+(state.cat===c?' assigned':'');
+        cb.textContent=c;
+        cb.onclick=function(){state.cat=(state.cat===c?null:c);rebuild();};
+        catSugg.appendChild(cb);
+      });
+    }
+    catWrap.appendChild(catSugg);
+    var catInp=document.createElement('input');
+    catInp.type='text';catInp.placeholder='Or type a new category name…';catInp.value=state.cat||'';
+    catInp.style.cssText='width:100%;border:1px solid var(--bdr2);border-radius:var(--rs);background:var(--surf2);color:var(--text);padding:6px 9px;font-size:13px;font-family:inherit';
+    catInp.oninput=function(){state.cat=this.value;};
+    catWrap.appendChild(catInp);
+    modal.appendChild(catWrap);
+
+    // Save button
+    var statusDiv=document.createElement('div');
+    statusDiv.id='aqStatus';statusDiv.style.cssText='font-size:13px;min-height:18px;margin-top:10px';
+
+    var saveBtn=document.createElement('button');
+    saveBtn.className='btn-acc';saveBtn.style.cssText='margin-top:16px;width:100%';
+    saveBtn.innerHTML='&#10003; Save Question';
+    saveBtn.onclick=function(){
+      var sid=document.getElementById('aqStatus');
+      var id=parseInt(document.getElementById('aq_id').value);
+      var stem=(document.getElementById('aq_stem').value||'').trim();
+      if(!id){sid.style.color='var(--err-txt)';sid.textContent='⚠ Enter a valid ID';return;}
+      if(!stem){sid.style.color='var(--err-txt)';sid.textContent='⚠ Question text cannot be empty';return;}
+
+      var newQ={id:id,type:state.type,stem:stem};
+
+      if(state.type==='single'||state.type==='multi'){
+        var opts={},corr=[];
+        var hasEmpty=state.options.some(function(o){return !o.text.trim();});
+        if(hasEmpty){sid.style.color='var(--err-txt)';sid.textContent='⚠ Fill in all option texts';return;}
+        state.options.forEach(function(o){opts[o.key]=o.text.trim();if(o.correct)corr.push(o.key);});
+        if(!corr.length){sid.style.color='var(--err-txt)';sid.textContent='⚠ Mark at least one correct answer';return;}
+        if(state.type==='single'&&corr.length>1){sid.style.color='var(--err-txt)';sid.textContent='⚠ Single-choice can only have one correct answer';return;}
+        newQ.options=opts;newQ.correct=corr;
+      }
+
+      if(state.type==='ordering'){
+        var items=state.items.map(function(s){return s.trim();}).filter(Boolean);
+        if(items.length<2){sid.style.color='var(--err-txt)';sid.textContent='⚠ Add at least 2 items';return;}
+        newQ.items=items;newQ.correct=items.slice();
+      }
+
+      if(state.type==='matching'){
+        var mopts=(state.matchOptions||[]).map(function(s){return s.trim();}).filter(Boolean);
+        var pairs=(state.pairs||[]).filter(function(p){return p.description.trim();});
+        if(mopts.length<2){sid.style.color='var(--err-txt)';sid.textContent='⚠ Add at least 2 options';return;}
+        if(!pairs.length){sid.style.color='var(--err-txt)';sid.textContent='⚠ Add at least one pair';return;}
+        newQ.options=mopts;
+        newQ.pairs=pairs.map(function(p){return{description:p.description.trim(),correct:p.correct};});
+      }
+
+      var existIdx=QS.findIndex(function(q){return q.id===id;});
+      if(existIdx>=0){
+        if(!confirm('Q'+id+' already exists. Overwrite it?'))return;
+        QS[existIdx]=newQ;
+      } else {
+        QS.push(newQ);
+        QS.sort(function(a,b){return a.id-b.id;});
+      }
+
+      // Apply category
+      if(state.cat&&state.cat.trim()){addCat(id,state.cat.trim());}
+
+      sid.style.color='var(--ok-txt)';sid.textContent='✓ Saving to cloud…';
+      saveContent().then(function(ok){
+        sid.textContent=ok?'✓ Q'+id+' saved and synced!':'⚠ Saved locally — cloud sync failed. Try again.';
+        sid.style.color=ok?'var(--ok-txt)':'var(--warn-txt)';
+        // Reset for next question
+        nextId=id+1;
+        state={type:state.type,options:[{key:'A',text:'',correct:false},{key:'B',text:'',correct:false},{key:'C',text:'',correct:false},{key:'D',text:'',correct:false}],items:['','',''],stem:'',cat:state.cat,matchOptions:['',''],pairs:[{description:'',correct:''}]};
+        setTimeout(function(){rebuild();},1200);
+      });
+    };
+
+    modal.appendChild(saveBtn);
+    modal.appendChild(statusDiv);
+
+    overlay.appendChild(modal);
+    document.body.appendChild(overlay);
+  }
+
+  rebuild();
 }
 
 // ── Submit (normal study) ──────────────────────────────────────────────────
@@ -1347,7 +1696,85 @@ function rFocus(m){
       +'<td>'+(x.wr>0?'<span style="color:var(--err-txt);font-weight:700">'+x.wr+'&#10007;</span> <span style="color:var(--muted);font-size:11px">'+pct+'% right</span>':'<span style="color:var(--ok-txt)">'+(x.cor>0?'All correct':'Not tried')+'</span>')+'</td>'
       +'<td><button class="btn" onclick="startRetry(['+x.qi+'])">Retry &#8594;</button></td></tr>';
   });
-  h+='</tbody></table></div>';m.innerHTML=h;
+  h+='</tbody></table></div>';
+
+  // Collect visible qids for select-all
+  var visibleQids=fl.map(function(x){return x.qq.id;});
+
+  // Bulk mode toggle button row
+  var bulkToggleHtml='<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">'
+    +'<button class="btn'+(S.bulkMode?' btn-pri':'')+'" onclick="toggleBulkMode()">'
+    +(S.bulkMode?'&#10005; Exit bulk label':'&#127991; Bulk label')+'</button>';
+  if(S.bulkMode && fl.length){
+    var allSel=visibleQids.every(function(id){return S.bulkSel.has(id);});
+    bulkToggleHtml+='<button class="btn" onclick="selectAllVisible('+JSON.stringify(visibleQids)+')">'
+      +(allSel?'Deselect all':'Select all '+fl.length+'')+'</button>';
+    if(S.bulkSel.size){
+      bulkToggleHtml+='<span style="font-size:13px;font-weight:700;color:var(--acc)">'+S.bulkSel.size+' selected</span>';
+    }
+  }
+  bulkToggleHtml+='</div>';
+
+  // Inject checkboxes into each table row if bulk mode
+  if(S.bulkMode){
+    h=h.replace('<table class="ftbl"><thead><tr>','<table class="ftbl"><thead><tr><th style="width:28px"></th>');
+    fl.forEach(function(x){
+      var checked=S.bulkSel.has(x.qq.id);
+      var cb='<td><input type="checkbox" class="ftbl-cb" '+(checked?'checked':'')+' onchange="toggleBulkQ('+x.qq.id+')"></td>';
+      h=h.replace('<tr><td><strong>Q'+x.qq.id+'</strong>',cb+'<tr><td><strong>Q'+x.qq.id+'</strong>');
+    });
+  }
+
+  m.innerHTML=bulkToggleHtml+h;
+
+  // Bulk action bar (sticky bottom)
+  if(S.bulkMode && S.bulkSel.size){
+    var bar=document.createElement('div');
+    bar.className='bulk-bar';
+    var cnt=document.createElement('span');
+    cnt.className='bulk-count';
+    cnt.textContent=S.bulkSel.size+' question'+(S.bulkSel.size>1?'s':'')+' selected';
+    bar.appendChild(cnt);
+
+    var catInpEl=document.createElement('input');
+    catInpEl.type='text';catInpEl.placeholder='Category name…';catInpEl.className='bulk-cat-input';
+    catInpEl.id='bulkCatInput';
+    catInpEl.onkeydown=function(e){if(e.key==='Enter'){applyBulkCat(this.value);}};
+    bar.appendChild(catInpEl);
+
+    var applyBtn=document.createElement('button');
+    applyBtn.className='btn btn-pri';
+    applyBtn.innerHTML='&#127991; Assign';
+    applyBtn.onclick=function(){applyBulkCat(document.getElementById('bulkCatInput').value);};
+    bar.appendChild(applyBtn);
+
+    var rmBtn2=document.createElement('button');
+    rmBtn2.className='btn';
+    rmBtn2.style.cssText='color:var(--err-txt);border-color:var(--err)';
+    rmBtn2.innerHTML='&#215; Remove';
+    rmBtn2.title='Remove this category from selected';
+    rmBtn2.onclick=function(){removeBulkCat(document.getElementById('bulkCatInput').value);};
+    bar.appendChild(rmBtn2);
+
+    // Existing category shortcuts
+    if(S.categoryList&&S.categoryList.length){
+      var shortcuts=document.createElement('div');
+      shortcuts.className='bulk-existing';
+      var label2=document.createElement('span');
+      label2.style.cssText='font-size:11px;color:var(--muted);font-weight:700';
+      label2.textContent='Quick assign:';
+      shortcuts.appendChild(label2);
+      S.categoryList.forEach(function(cat){
+        var sc=document.createElement('button');
+        sc.className='bulk-existing-btn';sc.textContent=cat;
+        sc.onclick=function(){applyBulkCat(cat);};
+        shortcuts.appendChild(sc);
+      });
+      bar.appendChild(shortcuts);
+    }
+
+    m.appendChild(bar);
+  }
 }
 
 // ── Sync / Account ─────────────────────────────────────────────────────────
@@ -1546,6 +1973,12 @@ function rSync(m) {
     aNote.style.cssText = 'font-size:12px;color:var(--acc);margin-left:10px;font-weight:700';
     aNote.textContent = 'Edit buttons now visible on every question';
     adminRow.appendChild(aNote);
+    var addQBtn = document.createElement('button');
+    addQBtn.className = 'btn btn-pri';
+    addQBtn.style.cssText = 'margin-left:10px;font-size:13px';
+    addQBtn.innerHTML = '&#10010; Add Question';
+    addQBtn.onclick = openAddQuestionModal;
+    adminRow.appendChild(addQBtn);
   }
   root.appendChild(adminRow);
   root.appendChild(acc);
