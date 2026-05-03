@@ -365,8 +365,9 @@ input.jmp{border:1px solid var(--bdr2);border-radius:var(--rs);background:var(--
 </div>
 
 <script>
-var QS = JSON.parse(document.getElementById('qdata').textContent);
-console.log('Loaded', QS.length, 'questions');
+// QS is populated from Supabase on load. qdata is kept as fallback seed only.
+var QS = [];
+var _SEED_QS = JSON.parse(document.getElementById('qdata').textContent);
 
 var SB_URL = 'https://xhdwuacoilfigeqfmivx.supabase.co';
 var SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhoZHd1YWNvaWxmaWdlcWZtaXZ4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY1NDM5MjAsImV4cCI6MjA5MjExOTkyMH0.P7RI2PqXTgHBlYvHL4XonSNt72CAQr0kpEWGRcd_BcI';
@@ -459,7 +460,7 @@ async function startApp(){
   updTryBtn();render();
 }
 async function load(){
-  // Load user progress
+  // ── Load user progress ──────────────────────────────────────────────────
   try{
     var r=await SB.from('quiz_progress').select('data').eq('user_id',USERID).single();
     if(r.error&&r.error.code!=='PGRST116')throw r.error;
@@ -467,16 +468,28 @@ async function load(){
       S.tries=r.data.data.tries||[];
       S.activeTry=r.data.data.activeTry||1;
       S.exams=r.data.data.exams||[];
-      S.categories=r.data.data.categories||{};
-      S.categoryList=r.data.data.categoryList||[];
     }
     setSS(true,'synced ✓');
   }catch(e){console.warn('progress load:',e);setSS(false,'offline');}
 
-  // Load shared explanations + corrections + custom questions
+  // ── Load shared content (questions, explanations, corrections, categories) ──
   try{
-    var rc=await SB.from('quiz_content').select('key,data').in('key',['explanations','corrections','custom_questions']);
+    var rc=await SB.from('quiz_content').select('key,data')
+      .in('key',['questions','explanations','corrections','categories']);
     if(!rc.error&&rc.data){
+      var qRow=rc.data.find(function(r){return r.key==='questions';});
+      var dbQs=qRow&&qRow.data&&qRow.data.length?qRow.data:null;
+
+      if(dbQs){
+        // DB is source of truth
+        QS=dbQs;
+      } else {
+        // DB empty — fall back to static seed (first run or not migrated yet)
+        QS=_SEED_QS.slice();
+        console.log('No questions in DB — using seed data ('+QS.length+' questions)');
+      }
+      QS.sort(function(a,b){return a.id-b.id;});
+
       rc.data.forEach(function(row){
         if(row.key==='explanations'){
           var exp=row.data||{};
@@ -486,52 +499,39 @@ async function load(){
             S.cache[id]=exp[k];
           });
         }
-        if(row.key==='corrections'){
-          S.corrections=row.data||{};
-        }
-        if(row.key==='custom_questions'){
-          var cqs=row.data||[];
-          if(cqs.length){
-            // Merge custom questions into QS (avoid duplicates by id)
-            var existingIds=new Set(QS.map(function(q){return q.id;}));
-            cqs.forEach(function(q){
-              if(!existingIds.has(q.id)){QS.push(q);existingIds.add(q.id);}
-              else{
-                // Update existing if it came from custom (overwrite)
-                var idx=QS.findIndex(function(qq){return qq.id===q.id;});
-                if(idx>=0)QS[idx]=q;
-              }
-            });
-            QS.sort(function(a,b){return a.id-b.id;});
-          }
+        if(row.key==='corrections'){S.corrections=row.data||{};}
+        if(row.key==='categories'){
+          S.categories=row.data.categories||{};
+          S.categoryList=row.data.categoryList||[];
         }
       });
+    } else {
+      // Network error — use seed
+      QS=_SEED_QS.slice();
     }
-  }catch(e){console.warn('content load:',e);}
+  }catch(e){console.warn('content load:',e);QS=_SEED_QS.slice();}
 }
 async function dbsave(){
   if(!SB||!USERID)return;
-  // Save user progress
+  // Save user progress (answers, tries — NOT categories, those are admin-managed in quiz_content)
   try{
-    var r=await SB.from('quiz_progress').upsert({user_id:USERID,data:{tries:S.tries,activeTry:S.activeTry,exams:S.exams,categories:S.categories,categoryList:S.categoryList},updated_at:new Date().toISOString()});
+    var r=await SB.from('quiz_progress').upsert({user_id:USERID,data:{tries:S.tries,activeTry:S.activeTry,exams:S.exams},updated_at:new Date().toISOString()});
     if(r.error)throw r.error;
     setSS(true,'saved ✓');
   }catch(e){setSS(false,'save failed');}
 }
 
 async function saveContent(){
-  // Save shared explanations+corrections+custom_questions (admin action)
+  // Admin-only: save all shared content to DB
   if(!SB)return;
   try{
     var expObj={};
     Object.keys(S.explanations).forEach(function(k){expObj[k]=S.explanations[k];});
-    // Collect custom questions (those not in the original static set)
-    var staticIds=new Set(JSON.parse(document.getElementById('qdata').textContent).map(function(q){return q.id;}));
-    var customQs=QS.filter(function(q){return !staticIds.has(q.id);});
     await SB.from('quiz_content').upsert([
-      {key:'explanations',    data:expObj,   updated_at:new Date().toISOString()},
-      {key:'corrections',     data:S.corrections, updated_at:new Date().toISOString()},
-      {key:'custom_questions',data:customQs, updated_at:new Date().toISOString()}
+      {key:'questions',    data:QS,                                    updated_at:new Date().toISOString()},
+      {key:'explanations', data:expObj,                                 updated_at:new Date().toISOString()},
+      {key:'corrections',  data:S.corrections,                          updated_at:new Date().toISOString()},
+      {key:'categories',   data:{categories:S.categories,categoryList:S.categoryList}, updated_at:new Date().toISOString()}
     ]);
     return true;
   }catch(e){console.error('saveContent:',e);return false;}
@@ -640,23 +640,22 @@ function addCat(qid,cat){
   if(!S.categories[qid])S.categories[qid]=[];
   if(!S.categories[qid].includes(cat))S.categories[qid].push(cat);
   if(!S.categoryList.includes(cat))S.categoryList.push(cat);
-  sched();render();
+  saveContent();render();
 }
 function removeCat(qid,cat){
   if(!S.categories[qid])return;
   S.categories[qid]=S.categories[qid].filter(function(c){return c!==cat;});
   if(S.categories[qid].length===0)delete S.categories[qid];
-  sched();render();
+  saveContent();render();
 }
 function deleteCat(cat){
-  // Remove from all questions
   Object.keys(S.categories).forEach(function(qid){
     S.categories[qid]=S.categories[qid].filter(function(c){return c!==cat;});
     if(S.categories[qid].length===0)delete S.categories[qid];
   });
   S.categoryList=S.categoryList.filter(function(c){return c!==cat;});
   if(S.activeCat===cat)S.activeCat='all';
-  sched();render();
+  saveContent();render();
 }
 function toggleCatPanel(qid){
   S.catPanelOpen=(S.catPanelOpen===qid)?null:qid;
@@ -690,6 +689,22 @@ function goRandom(){
   if(gi>=0)goTo(gi);
 }
 
+
+// ── Delete question (admin) ────────────────────────────────────────────────
+function deleteQuestion(qid){
+  if(!confirm('Delete Q'+qid+' permanently? This cannot be undone.'))return;
+  QS=QS.filter(function(q){return q.id!==qid;});
+  // Also clean up its categories and explanation
+  delete S.categories[qid];
+  delete S.explanations[qid];
+  delete S.cache[qid];
+  // Go to prev question if we deleted the current one
+  if(S.idx>=QS.length)S.idx=Math.max(0,QS.length-1);
+  saveContent().then(function(ok){
+    if(!ok)alert('⚠ Deleted locally but cloud sync failed — reload to check.');
+  });
+  render();
+}
 
 // ── Bulk label ─────────────────────────────────────────────────────────────
 function toggleBulkMode(){
@@ -1219,23 +1234,28 @@ function rQuiz(m){
 
   var q=getQ(QS[S.idx]);
   h+='<div class="card">';
-  // Category tags for this question
+  // Category tags for this question (visible to everyone)
   var qCats=getCats(q.id);
-  var catTagsHtml=qCats.map(function(c){return '<span class="cat-tag">'+esc(c)+'<span class="rm" onclick="removeCat('+q.id+',\''+c.replace(/'/g,"\'")+'\')" title="Remove">&#215;</span></span>';}).join(' ');
-  h+='<div class="qnum">Q'+q.id+' '+badge(q.type)
-    +' <button class="rand-btn" style="padding:2px 7px;font-size:11px;margin-left:4px;'+(S.catPanelOpen===q.id?'border-color:var(--acc);color:var(--acc);background:var(--acc-bg)':'')+'" onclick="toggleCatPanel('+q.id+')" title="Tag this question with a category">&#127991; Tag'+(qCats.length?' ('+qCats.length+')':'')+'</button>'
-    +(S.adminMode?' <button class="btn" style="margin-left:auto;font-size:11px;padding:3px 8px;color:var(--acc);border-color:var(--acc)" onclick="openEditModal('+q.id+')">&#9999; Edit</button>':'')
-    +'</div>';
+  var catTagsHtml=qCats.map(function(c){
+    return '<span class="cat-tag">'+esc(c)+(S.adminMode?'<span class="rm" onclick="removeCat('+q.id+',\''+c.replace(/'/g,"\'")+'')" title="Remove">&#215;</span>':'')+'</span>';
+  }).join(' ');
+  h+='<div class="qnum">Q'+q.id+' '+badge(q.type);
+  if(S.adminMode){
+    h+=' <button class="rand-btn" style="padding:2px 7px;font-size:11px;margin-left:4px;'+(S.catPanelOpen===q.id?'border-color:var(--acc);color:var(--acc);background:var(--acc-bg)':'')+'" onclick="toggleCatPanel('+q.id+')" title="Tag this question">&#127991; Tag'+(qCats.length?' ('+qCats.length+')':'')+'</button>'
+      +' <button class="btn" style="font-size:11px;padding:2px 7px;color:var(--acc);border-color:var(--acc)" onclick="openEditModal('+q.id+')">&#9999; Edit</button>'
+      +' <button class="btn" style="font-size:11px;padding:2px 7px;color:var(--err-txt);border-color:var(--err)" onclick="deleteQuestion('+q.id+')">&#128465;</button>';
+  }
+  h+='</div>';
   if(qCats.length)h+='<div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:8px">'+catTagsHtml+'</div>';
-  // Category panel
-  if(S.catPanelOpen===q.id){
-    h+='<div class="cat-panel"><div class="cat-panel-title">&#127991; Add to category</div>'
+  // Category panel — admin only
+  if(S.adminMode&&S.catPanelOpen===q.id){
+    h+='<div class="cat-panel"><div class="cat-panel-title">&#127991; Assign category</div>'
       +'<div class="cat-input-row">'
       +'<input class="cat-input" id="catNewInput" type="text" placeholder="New category name&#8230;" onkeydown="if(event.key===\'Enter\'){var v=document.getElementById(\'catNewInput\').value;addCat('+q.id+',v)}">'
       +'<button class="btn btn-pri" onclick="var v=document.getElementById(\'catNewInput\').value;addCat('+q.id+',v)">Add</button>'
       +'</div>';
     if(S.categoryList.length){
-      h+='<div style="font-size:11px;color:var(--muted);margin-bottom:5px">Existing categories — click to toggle:</div><div class="cat-existing">';
+      h+='<div style="font-size:11px;color:var(--muted);margin-bottom:5px">Existing — click to toggle:</div><div class="cat-existing">';
       S.categoryList.forEach(function(cat){
         var assigned=hasCat(q.id,cat);
         h+='<button class="cat-existing-btn'+(assigned?' assigned':'')+'" onclick="'+(assigned?'removeCat':'addCat')+'('+q.id+',\''+cat.replace(/'/g,"\'")+'\')">'+esc(cat)+(assigned?' &#10003;':'')+'</button>';
@@ -1701,10 +1721,11 @@ function rFocus(m){
   // Collect visible qids for select-all
   var visibleQids=fl.map(function(x){return x.qq.id;});
 
-  // Bulk mode toggle button row
-  var bulkToggleHtml='<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">'
-    +'<button class="btn'+(S.bulkMode?' btn-pri':'')+'" onclick="toggleBulkMode()">'
-    +(S.bulkMode?'&#10005; Exit bulk label':'&#127991; Bulk label')+'</button>';
+  // Bulk mode toggle button row — admin only
+  var bulkToggleHtml='<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">';
+  if(S.adminMode){
+    bulkToggleHtml+='<button class="btn'+(S.bulkMode?' btn-pri':'')+'" onclick="toggleBulkMode()">'
+      +(S.bulkMode?'&#10005; Exit bulk label':'&#127991; Bulk label')+'</button>';
   if(S.bulkMode && fl.length){
     var allSel=visibleQids.every(function(id){return S.bulkSel.has(id);});
     bulkToggleHtml+='<button class="btn" onclick="selectAllVisible('+JSON.stringify(visibleQids)+')">'
@@ -1712,6 +1733,7 @@ function rFocus(m){
     if(S.bulkSel.size){
       bulkToggleHtml+='<span style="font-size:13px;font-weight:700;color:var(--acc)">'+S.bulkSel.size+' selected</span>';
     }
+  }
   }
   bulkToggleHtml+='</div>';
 
@@ -1979,6 +2001,22 @@ function rSync(m) {
     addQBtn.innerHTML = '&#10010; Add Question';
     addQBtn.onclick = openAddQuestionModal;
     adminRow.appendChild(addQBtn);
+
+    // Migrate seed → DB button (shown only if DB questions might be missing)
+    var migrateBtn = document.createElement('button');
+    migrateBtn.className = 'btn';
+    migrateBtn.style.cssText = 'margin-left:6px;font-size:12px';
+    migrateBtn.innerHTML = '&#128190; Push '+QS.length+' questions to DB';
+    migrateBtn.title = 'Publish current question set to the database so all users load from DB';
+    migrateBtn.onclick = function(){
+      if(!confirm('Push all '+QS.length+' current questions to the database?\nThis makes the DB the single source of truth for all users.'))return;
+      migrateBtn.disabled=true;migrateBtn.textContent='Saving…';
+      saveContent().then(function(ok){
+        migrateBtn.textContent=ok?'&#10003; Pushed!':'⚠ Failed';
+        migrateBtn.style.color=ok?'var(--ok-txt)':'var(--err-txt)';
+      });
+    };
+    adminRow.appendChild(migrateBtn);
   }
   root.appendChild(adminRow);
   root.appendChild(acc);
@@ -2136,7 +2174,7 @@ function rSync(m) {
   if(S.categoryList && S.categoryList.length){
     var catIntro = document.createElement('p');
     catIntro.style.cssText = 'font-size:13px;color:var(--muted);line-height:1.6;margin-bottom:12px';
-    catIntro.textContent = 'Manage your question categories. Click a category to study only those questions.';
+    catIntro.textContent = 'Admin-managed categories are shared with all users. Click Study to filter the quiz by category.';
     catCard.appendChild(catIntro);
 
     var catGrid = document.createElement('div');
