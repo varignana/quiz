@@ -1237,7 +1237,9 @@ function rQuiz(m){
   // Category tags for this question (visible to everyone)
   var qCats=getCats(q.id);
   var catTagsHtml=qCats.map(function(c){
-    return '<span class="cat-tag">'+esc(c)+(S.adminMode?'<span class="rm" onclick="removeCat('+q.id+',\''+c.replace(/'/g,"\'")+'')" title="Remove">&#215;</span>':'')+'</span>';
+    var sc=c.replace(/'/g,'&#39;');
+    var rmBtn=S.adminMode?'<span class="rm" onclick="removeCat('+q.id+',"'+sc+'")" title="Remove">&#215;</span>':'';
+    return '<span class="cat-tag">'+esc(c)+rmBtn+'</span>';
   }).join(' ');
   h+='<div class="qnum">Q'+q.id+' '+badge(q.type);
   if(S.adminMode){
