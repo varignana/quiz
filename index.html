@@ -2309,6 +2309,97 @@ function rSync(m) {
   m.innerHTML = '';
   m.appendChild(root);
 }
+
+// ── Corrections / getQ ────────────────────────────────────────────────────
+// Get corrected version of a question (admin edits override original data)
+function getQ(q){
+  var c=S.corrections[q.id];
+  if(!c)return q;
+  return Object.assign({},q,c);
+}
+
+// ── Admin mode ──────────────────────────────────────────────────────────────
+var ADMIN_PWD='awsquiz2025';
+
+function toggleAdmin(){
+  if(S.adminMode){S.adminMode=false;render();return;}
+  var pwd=prompt('Enter admin password:');
+  if(pwd===ADMIN_PWD){S.adminMode=true;alert('Admin mode ON. Edit/Tag/Delete buttons now visible on each question.');render();}
+  else if(pwd!==null){alert('Wrong password.');}
+}
+
+// ── Edit modal (admin) ──────────────────────────────────────────────────────
+function openEditModal(qid){
+  var q=QS.find(function(x){return x.id===qid;});
+  if(!q){alert('Question not found.');return;}
+  var overlay=document.getElementById('adminModal');
+  if(overlay)overlay.remove();
+  overlay=document.createElement('div');
+  overlay.id='adminModal';
+  overlay.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:200;display:flex;align-items:flex-start;justify-content:center;padding:16px;overflow-y:auto';
+  overlay.onclick=function(e){if(e.target===overlay)overlay.remove();};
+  var modal=document.createElement('div');
+  modal.style.cssText='background:var(--surf);border-radius:10px;padding:22px;max-width:640px;width:100%;margin-top:20px;border:1px solid var(--bdr2)';
+  modal.innerHTML='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">'
+    +'<strong style="font-size:15px">&#9999; Edit Q'+qid+'</strong>'
+    +'<button class="btn" onclick="document.getElementById(\'adminModal\').remove()">&#10005; Close</button></div>'
+    +'<div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;margin-bottom:3px">Question Text</div>'
+    +'<textarea id="editStem" rows="3" style="width:100%;border:1px solid var(--bdr2);border-radius:var(--rs);background:var(--surf2);color:var(--text);padding:8px;font-size:13px;font-family:inherit;resize:vertical;margin-bottom:10px">'+q.stem.replace(/</g,'&lt;')+'</textarea>'
+    +(q.options?'<div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;margin-bottom:4px">Options</div>'
+      +Object.entries(q.options).map(function(kv){
+        return '<div style="display:flex;gap:6px;margin-bottom:5px"><span style="min-width:20px;font-weight:700;color:var(--muted);padding-top:7px">'+kv[0]+'</span>'
+          +'<input id="editOpt'+kv[0]+'" type="text" value="'+kv[1].replace(/"/g,'&quot;')+'" style="flex:1;border:1px solid var(--bdr2);border-radius:var(--rs);background:var(--surf2);color:var(--text);padding:6px 9px;font-size:13px;font-family:inherit"></div>';
+      }).join(''):'')
+    +'<div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;margin:10px 0 3px">Correct Answer(s) — comma separated</div>'
+    +'<input id="editCorrect" type="text" value="'+(q.correct?q.correct.join(', '):'')+'" style="width:100%;border:1px solid var(--bdr2);border-radius:var(--rs);background:var(--surf2);color:var(--text);padding:6px 9px;font-size:13px;font-family:inherit;margin-bottom:12px">'
+    +'<div id="editMsg" style="font-size:13px;min-height:16px;margin-bottom:8px"></div>'
+    +'<button class="btn-acc" style="width:100%" onclick="saveEdit('+qid+')">&#10003; Save Changes</button>';
+  overlay.appendChild(modal);
+  document.body.appendChild(overlay);
+}
+
+function saveEdit(qid){
+  var stem=document.getElementById('editStem').value.trim();
+  var msg=document.getElementById('editMsg');
+  if(!stem){msg.style.color='var(--err-txt)';msg.textContent='Stem cannot be empty';return;}
+  var q=QS.find(function(x){return x.id===qid;});
+  if(!q)return;
+  var patch={stem:stem};
+  if(q.options){
+    var opts={};
+    Object.keys(q.options).forEach(function(k){var el=document.getElementById('editOpt'+k);if(el)opts[k]=el.value.trim();});
+    patch.options=opts;
+  }
+  var corrEl=document.getElementById('editCorrect');
+  if(corrEl){patch.correct=corrEl.value.split(',').map(function(s){return s.trim();}).filter(Boolean);}
+  // Apply to QS directly
+  Object.assign(q,patch);
+  // Also save correction for backwards compat
+  S.corrections[qid]=patch;
+  msg.style.color='var(--ok-txt)';msg.textContent='Saving…';
+  saveContent().then(function(ok){
+    msg.textContent=ok?'&#10003; Saved!':'&#9888; Local only — cloud sync failed';
+    msg.style.color=ok?'var(--ok-txt)':'var(--warn-txt)';
+    render();
+  });
+}
+
+// ── Boot ────────────────────────────────────────────────────────────────────
+(async function boot(){
+  SB=supabase.createClient(SB_URL,SB_KEY);
+  try{
+    var sr=await SB.auth.getSession();
+    if(sr.data&&sr.data.session&&sr.data.session.user){
+      USERID=sr.data.session.user.id;
+      USERNAME=localStorage.getItem('quiz_username')||sr.data.session.user.email.split('@')[0];
+      document.getElementById('authOverlay').style.display='none';
+      document.getElementById('hdrEl').style.display='';
+      await startApp();return;
+    }
+  }catch(e){console.warn(e);}
+  var saved=localStorage.getItem('quiz_username');
+  if(saved)document.getElementById('authUser').value=saved;
+})();
 </script>
 </body>
 </html>
