@@ -1270,8 +1270,8 @@ function rQuiz(m){
   if(IS_GUEST){
     h+='<div class="guest-banner">'
       +'<span style="font-size:20px">&#128100;</span>'
-      +'<div class="guest-banner-txt"><strong>You're browsing as a guest.</strong> '
-      +'You can view and answer all questions, but your progress won't be saved. '
+      +'<div class="guest-banner-txt"><strong>You&#39;re browsing as a guest.</strong> '
+      +'You can view and answer all questions, but your progress is not saved. '
       +'<a href="#" onclick="IS_GUEST=false;document.getElementById(\'hdrEl\').style.display=\'none\';document.getElementById(\'authOverlay\').style.display=\'\';event.preventDefault()" style="color:var(--acc);font-weight:700">Sign in or create an account</a> to track your results.</div>'
       +'</div>';
   }
@@ -1542,19 +1542,24 @@ function rExpl(q){
   var h='<div class="expl"><div class="xhdr">Explanation</div>';
   if(S.loading){h+='<div class="swrap"><div class="spin"></div> Generating&#8230;</div>';}
   else if(!S.expl||S.expl.error){h+='<div style="color:var(--muted);font-size:13px">Unavailable. <button class="btn" onclick="seeExpl()">Retry</button></div>';}
-  else{
-    if(S.expl.concept)h+='<div class="xcpt">&#128161; <strong>Key concept:</strong> '+esc(S.expl.concept)+'</div>';
-    if((q.type==='single'||q.type==='multi')&&q.options){
-      Object.entries(q.options).forEach(function(kv){var L=kv[0],e=S.expl[L];if(!e)return;var ok=e.ok||q.correct.includes(L);
-        h+='<div class="xrow"><div class="xico">'+(ok?'&#9989;':'&#10060;')+'</div><div class="xtxt '+(ok?'bok':'berr')+'"><strong>'+L+'. '+esc(kv[1])+'</strong><br>'+esc(e.why||'')+'</div></div>';
-      });
-    }else if(q.type==='matching'&&S.expl.explanations){
-      S.expl.explanations.forEach(function(e){h+='<div class="xrow"><div class="xico">&#9989;</div><div class="xtxt bok"><strong>'+esc(e.description)+'</strong> &#8594; '+esc(e.correct)+'<br><span style="color:var(--text)">'+esc(e.why||'')+'</span></div></div>';});
-    }else if(q.type==='ordering'&&S.expl.steps){
-      S.expl.steps.forEach(function(s,i){h+='<div class="xrow"><div class="xico" style="color:var(--acc);font-weight:700">'+(i+1)+'</div><div class="xtxt"><strong>'+esc(s.step||q.correct[i])+'</strong><br>'+esc(s.why||'')+'</div></div>';});
-    }
-  }
+  else{h+=renderExplContent(q,S.expl);}
   return h+'</div>';
+}
+
+// ── Shared explanation content renderer (used in study + exam review) ────────
+function renderExplContent(q,expl){
+  var h='';
+  if(expl.concept)h+='<div class="xcpt">&#128161; <strong>Key concept:</strong> '+esc(expl.concept)+'</div>';
+  if((q.type==='single'||q.type==='multi')&&q.options){
+    Object.entries(q.options).forEach(function(kv){var L=kv[0],e=expl[L];if(!e)return;var ok=e.ok||q.correct.includes(L);
+      h+='<div class="xrow"><div class="xico">'+(ok?'&#9989;':'&#10060;')+'</div><div class="xtxt '+(ok?'bok':'berr')+'"><strong>'+L+'. '+esc(kv[1])+'</strong><br>'+esc(e.why||'')+'</div></div>';
+    });
+  }else if(q.type==='matching'&&expl.explanations){
+    expl.explanations.forEach(function(e){h+='<div class="xrow"><div class="xico">&#9989;</div><div class="xtxt bok"><strong>'+esc(e.description)+'</strong> &#8594; '+esc(e.correct)+'<br><span style="color:var(--text)">'+esc(e.why||'')+'</span></div></div>';});
+  }else if(q.type==='ordering'&&expl.steps){
+    expl.steps.forEach(function(s,i){h+='<div class="xrow"><div class="xico" style="color:var(--acc);font-weight:700">'+(i+1)+'</div><div class="xtxt"><strong>'+esc(s.step||q.correct[i])+'</strong><br>'+esc(s.why||'')+'</div></div>';});
+  }
+  return h;
 }
 
 // ── Exam view ──────────────────────────────────────────────────────────────
@@ -1663,7 +1668,7 @@ function rExamResults(m){
        +'<div class="score-sub">/ 1000</div>'
        +'</div>'
        +'<div style="font-size:20px;font-weight:700;color:'+(res.passed?'var(--ok-txt)':'var(--err-txt)')+';">'+(res.passed?'&#127881; PASS':'&#128546; FAIL')+'</div>'
-       +'<div style="font-size:13px;color:var(--muted);margin-top:4px">Pass score: 700 &middot; '+(res.passed?'Congratulations!':'Keep studying — you\'ve got this!')+'</div>'
+       +'<div style="font-size:13px;color:var(--muted);margin-top:4px">Pass score: 700 &middot; '+(res.passed?'Congratulations!':'Keep studying &#8212; you&#39;ve got this!')+'</div>'
        +'</div>';
   h+='<div class="sg"><div class="sc"><div class="sn sn-ok">'+res.correct+'</div><div class="sl">Correct</div></div>'
     +'<div class="sc"><div class="sn sn-err">'+(res.total-res.correct)+'</div><div class="sl">Wrong</div></div>'
@@ -1692,7 +1697,6 @@ function rExamReview(i){
   var slot=document.getElementById('examReviewSlot');if(!slot)return;
   var h='<div class="card" style="border-color:'+(ok?'var(--ok)':'var(--err)')+'"><div class="qnum">Exam Q'+(i+1)+' (Q'+q.id+') '+badge(q.type)+'</div><div class="stem">'+esc(q.stem)+'</div>';
   var ua=a||(q.type==='matching'?{}:q.type==='ordering'?[]:null);
-  var uaL=Array.isArray(ua)&&q.type==='single'?ua[0]:(Array.isArray(ua)?ua:ua);
   if(q.type==='single')h+=rLockedOpts(q,Array.isArray(ua)?ua[0]:ua);
   else if(q.type==='multi')h+=rLockedMultiOpts(q,Array.isArray(ua)?ua:[]);
   else if(q.type==='matching')h+=rMatch(q,true,ua);
@@ -1700,8 +1704,52 @@ function rExamReview(i){
   h+='</div>';
   if(!a)h+='<div class="banner ban-err">&#10007; Not answered</div>';
   else if(ok)h+='<div class="banner ban-ok">&#10003; Correct!</div>';
-  else{var da=Array.isArray(ua)?ua.join(', '):String(ua||'?');h+='<div class="banner ban-err">&#10007; You chose: <strong>'+esc(da)+'</strong> &middot; Correct: <strong>'+esc(q.correct.join?q.correct.join(', '):q.correct)+'</strong></div>';}
+  else{var da=Array.isArray(ua)?ua.join(', '):String(ua||'?');h+='<div class="banner ban-err">&#10007; You chose: <strong>'+esc(da)+'</strong> &middot; Correct: <strong>'+esc(q.correct&&q.correct.join?q.correct.join(', '):String(q.correct||''))+'</strong></div>';}
+
+  // ── Explanation ──────────────────────────────────────────────────────────
+  var expl=S.explanations[q.id]||S.cache[q.id];
+  if(expl&&!expl.error){
+    h+='<div class="expl"><div class="expl-hdr">&#128161; Explanation</div>'+renderExplContent(q,expl)+'</div>';
+  } else {
+    // Offer to fetch it on demand
+    h+='<div class="expl"><div class="expl-hdr">&#128161; Explanation</div>'
+      +'<div style="font-size:13px;color:var(--muted);display:flex;align-items:center;gap:8px">'
+      +'No cached explanation. '
+      +'<button class="btn" style="font-size:12px" onclick="fetchExamExpl('+i+')">&#9889; Generate</button>'
+      +'</div></div>';
+  }
+
   slot.innerHTML=h;slot.scrollIntoView({behavior:'smooth',block:'nearest'});
+}
+
+async function fetchExamExpl(i){
+  var q=S.exam.questions[i];
+  // Temporarily borrow study-mode fetch by setting S.expl path
+  var slot=document.getElementById('examReviewSlot');
+  if(!slot)return;
+  var btn=slot.querySelector('button[onclick="fetchExamExpl('+i+')"]');
+  if(btn){btn.disabled=true;btn.textContent='Generating…';}
+  // fetchX sets S.expl and calls render() — we don't want that here, so call the API directly
+  try{
+    var ol='',prompt='';
+    if(q.type==='single'||q.type==='multi'){
+      ol=Object.entries(q.options).map(function(kv){return kv[0]+'. '+kv[1];}).join('\n');
+      prompt='AWS AI Practitioner exam question:\n'+q.stem+'\n'+ol+'\nCorrect: '+q.correct.join(', ')+'\nReturn ONLY compact JSON: {"concept":"...","A":{"ok":true,"why":"..."},"B":{"ok":false,"why":"..."}}';
+    } else if(q.type==='ordering'){
+      prompt='AWS ordering question:\n'+q.stem+'\nCorrect order: '+q.correct.join(' → ')+'\nReturn ONLY compact JSON: {"concept":"...","steps":[{"step":"...","why":"..."}]}';
+    } else if(q.type==='matching'){
+      prompt='AWS matching question:\n'+q.stem+'\nPairs: '+q.pairs.map(function(p){return p.description+' → '+p.correct;}).join('; ')+'\nReturn ONLY compact JSON: {"concept":"...","explanations":[{"description":"...","correct":"...","why":"..."}]}';
+    }
+    var r=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:1000,messages:[{role:'user',content:prompt}]})});
+    var d=await r.json();
+    var txt=d.content&&d.content[0]&&d.content[0].text;
+    var clean=txt.replace(/```json|```/g,'').trim();
+    var expl=JSON.parse(clean);
+    S.explanations[q.id]=expl;S.cache[q.id]=expl;
+    rExamReview(i);
+  }catch(e){
+    if(btn){btn.disabled=false;btn.textContent='⚠ Failed — retry';}
+  }
 }
 
 // ── Exam setup view ────────────────────────────────────────────────────────
@@ -2261,5 +2309,6 @@ function rSync(m) {
   m.innerHTML = '';
   m.appendChild(root);
 }
-
-
+</script>
+</body>
+</html>
