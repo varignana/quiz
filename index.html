@@ -33,16 +33,33 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 /* ── HEADER: fixed-width slots, nothing can overflow ── */
 .hdr{
   background:var(--surf);border-bottom:1px solid var(--bdr);
-  padding:7px 10px;
-  display:flex;align-items:center;gap:6px;
+  padding:0 10px;
+  display:flex;align-items:stretch;gap:0;
   position:sticky;top:0;z-index:30;
-  width:100%;overflow:hidden;
+  width:100%;overflow:hidden;min-height:48px;
 }
-.hdr-logo{font-weight:700;font-size:13px;color:var(--acc);white-space:nowrap;flex-shrink:0}
+.hdr-logo{font-weight:700;font-size:13px;color:var(--acc);white-space:nowrap;flex-shrink:0;
+  display:flex;align-items:center;padding:0 10px 0 2px;border-right:1px solid var(--bdr)}
 .hdr-logo em{color:var(--text);font-style:normal;font-weight:400}
-.hdr-sync{display:flex;align-items:center;gap:3px;flex-shrink:0}
+/* Nav tabs inside header */
+.hdr-nav{display:flex;align-items:stretch;flex:1;gap:0}
+.hnav{display:flex;align-items:center;padding:0 12px;font-size:12px;font-weight:700;
+  color:var(--muted);background:transparent;border:none;cursor:pointer;
+  border-bottom:3px solid transparent;white-space:nowrap;gap:5px;transition:color .15s}
+.hnav:hover:not(.hnav-act){color:var(--text);background:var(--surf2)}
+.hnav.hnav-act{color:var(--acc);border-bottom-color:var(--acc)}
+.hnav.hnav-study{font-size:13px;color:var(--text)}
+.hnav.hnav-study.hnav-act{color:var(--acc)}
+/* Right side of header */
+.hdr-right{display:flex;align-items:center;gap:5px;padding-left:8px;flex-shrink:0;border-left:1px solid var(--bdr)}
 .sync-dot{width:6px;height:6px;border-radius:50%;display:inline-block;flex-shrink:0}
 .dot-ok{background:var(--ok)}.dot-err{background:var(--err)}.dot-wait{background:var(--hint)}
+.hdr-sync{display:flex;align-items:center;gap:3px;font-size:11px;color:var(--muted);white-space:nowrap}
+/* Guest banner */
+.guest-banner{background:var(--surf2);border:1.5px dashed var(--bdr2);border-radius:var(--r);
+  padding:12px 16px;margin-bottom:14px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.guest-banner-txt{flex:1;font-size:13px;color:var(--muted);line-height:1.5}
+.guest-banner-txt strong{color:var(--text)}
 /* sync text hidden on mobile, shown on wider */
 .sync-lbl{font-size:10px;color:var(--muted);white-space:nowrap;display:none}
 @media(min-width:500px){.sync-lbl{display:inline}}
@@ -227,10 +244,8 @@ input.jmp{border:1px solid var(--bdr2);border-radius:var(--rs);background:var(--
 .dskip{background:var(--surf2);border:1px solid var(--bdr);color:var(--hint)}
 .try-sec{background:var(--surf);border-radius:var(--r);border:1px solid var(--bdr);padding:14px 16px;margin-bottom:10px}
 .try-hdr{font-weight:600;font-size:14px;margin-bottom:9px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px}
-.vtabs{display:flex;gap:0;margin-bottom:14px;border:1px solid var(--bdr);border-radius:var(--r);overflow:hidden}
-.vtab{flex:1;padding:8px 4px;background:transparent;border:none;color:var(--muted);font-size:11px;cursor:pointer;font-weight:600;white-space:nowrap}
-.vtab.act{background:var(--acc);color:#000}
-.vtab:hover:not(.act){background:var(--surf2);color:var(--text)}
+/* vtabs removed — navigation is now in the header */
+.vtabs{display:none}
 .swrap{display:flex;align-items:center;gap:8px;color:var(--muted);font-size:13px;padding:12px}
 .spin{width:14px;height:14px;border:2px solid var(--bdr);border-top-color:var(--acc);border-radius:50%;animation:spin .7s linear infinite;flex-shrink:0}
 @keyframes spin{to{transform:rotate(360deg)}}
@@ -334,26 +349,30 @@ input.jmp{border:1px solid var(--bdr2);border-radius:var(--rs);background:var(--
     <div style="text-align:center;margin-top:11px">
       <button class="link-btn" id="authSwitch" onclick="toggleMode()">No account yet? Create one</button>
     </div>
+    <div style="text-align:center;margin-top:8px">
+      <button class="link-btn" style="color:var(--muted);font-size:12px" onclick="continueAsGuest()">Continue as guest (no progress saved)</button>
+    </div>
     <div class="errbox" id="authErr"></div>
   </div>
 </div>
 
-<!-- Header -->
+<!-- Header / unified nav -->
 <div class="hdr" id="hdrEl" style="display:none">
   <div class="hdr-logo">AWS <em>AI</em></div>
-  <div class="hdr-sync">
-    <span class="sync-dot dot-wait" id="syncDot"></span>
-    <span class="sync-lbl" id="syncTxt">&#8230;</span>
-  </div>
-  <div class="hdr-try">
+  <nav class="hdr-nav" id="hdrNav">
+    <button class="hnav hnav-study hnav-act" id="hnav-quiz"    onclick="setView('quiz')">&#128221; Study</button>
+    <button class="hnav"                      id="hnav-stats"   onclick="setView('stats')">&#128202; Stats</button>
+    <button class="hnav"                      id="hnav-focus"   onclick="setView('focus')">&#127919; Focus</button>
+    <button class="hnav"                      id="hnav-examSetup" onclick="setView('examSetup')">&#127891; Exam</button>
+    <button class="hnav"                      id="hnav-sync"    onclick="setView('sync')">&#9881;&#65039; Account</button>
+  </nav>
+  <div class="hdr-right">
+    <div class="hdr-sync">
+      <span class="sync-dot dot-wait" id="syncDot"></span>
+      <span class="sync-lbl" id="syncTxt">&#8230;</span>
+    </div>
     <button class="try-btn" id="tryBtn" onclick="toggleTryMenu()">Try 1</button>
-  </div>
-  <div class="hdr-actions">
-    <button class="hbtn hbtn-exam" onclick="setView('examSetup')" title="Mock Exam">&#127891;</button>
-    <button class="hbtn" onclick="setView('stats')" title="Stats">&#128202;</button>
-    <button class="hbtn" onclick="setView('focus')" title="Focus">&#127919;</button>
-    <button class="hbtn" onclick="setView('sync')" title="Account">&#128279;</button>
-    <button class="hbtn hbtn-pri" onclick="newTry()">+Try</button>
+    <button class="btn btn-pri" style="font-size:11px;padding:4px 9px" onclick="newTry()">+Try</button>
   </div>
 </div>
 
@@ -411,6 +430,31 @@ function setSS(ok,msg){
 }
 function showErr(id,msg){var el=document.getElementById(id);if(el){el.textContent=msg;el.style.display='block';}}
 function hideErr(id){var el=document.getElementById(id);if(el)el.style.display='none';}
+
+function continueAsGuest(){
+  IS_GUEST=true;USERID=null;USERNAME='guest';
+  document.getElementById('authOverlay').style.display='none';
+  document.getElementById('hdrEl').style.display='';
+  // Load questions from seed (no DB progress)
+  QS=_SEED_QS.slice();
+  // Try to load shared content (questions + categories) even as guest
+  (async function(){
+    try{
+      var rc=await SB.from('quiz_content').select('key,data').in('key',['questions','explanations','corrections','categories']);
+      if(!rc.error&&rc.data){
+        var qRow=rc.data.find(function(r){return r.key==='questions';});
+        if(qRow&&qRow.data&&qRow.data.length)QS=qRow.data;
+        QS.sort(function(a,b){return a.id-b.id;});
+        rc.data.forEach(function(row){
+          if(row.key==='explanations'){Object.keys(row.data||{}).forEach(function(k){var id=parseInt(k);S.explanations[id]=row.data[k];S.cache[id]=row.data[k];});}
+          if(row.key==='corrections'){S.corrections=row.data||{};}
+          if(row.key==='categories'){S.categories=row.data.categories||{};S.categoryList=row.data.categoryList||[];}
+        });
+      }
+    }catch(e){console.warn('guest content load:',e);}
+    S.loaded=true;S.idx=0;updTryBtn();render();
+  })();
+}
 
 function toggleMode(){
   AUTH_MODE=AUTH_MODE==='signin'?'signup':'signin';var s=AUTH_MODE==='signup';
@@ -512,7 +556,7 @@ async function load(){
   }catch(e){console.warn('content load:',e);QS=_SEED_QS.slice();}
 }
 async function dbsave(){
-  if(!SB||!USERID)return;
+  if(!SB||!USERID||IS_GUEST)return;
   // Save user progress (answers, tries — NOT categories, those are admin-managed in quiz_content)
   try{
     var r=await SB.from('quiz_progress').upsert({user_id:USERID,data:{tries:S.tries,activeTry:S.activeTry,exams:S.exams},updated_at:new Date().toISOString()});
@@ -546,7 +590,7 @@ function mkS(){return{idx:0,sel:null,matchSel:{},orderItems:null,revealed:false,
   retryMode:false,retryQueue:[],retryIdx:0,retrySel:null,retryMatchSel:{},retryOrderItems:null,
   retryRevealed:false,
   // Exam
-  exam:null,
+  exam:null,customExamQ:65,customExamEnabled:false,
   explanations:{},
   adminMode:false,
   corrections:{},
@@ -1093,6 +1137,24 @@ function buildExamQuestions(){
   return result;
 }
 
+function startCustomExam(){
+  var n=parseInt(S.customExamQ)||20;
+  n=Math.max(5,Math.min(n,QS.length));
+  // Proportional time: 65q = 90min → 1.3846 min/q
+  var secs=Math.round(n*(90/65)*60);
+  if(examInterval)clearInterval(examInterval);
+  // Build random questions
+  var pool=QS.slice().sort(function(){return Math.random()-.5;}).slice(0,n);
+  S.exam={
+    questions:pool,answers:{},flagged:{},idx:0,
+    startTime:Date.now(),submitted:false,
+    sel:null,matchSel:{},orderItems:pool[0]&&pool[0].type==='ordering'?pool[0].items.slice():null,
+    customSecs:secs,isCustom:true
+  };
+  setView('exam');
+  examInterval=setInterval(tickExamTimer,1000);
+}
+
 function startExam(){
   if(examInterval)clearInterval(examInterval);
   var qs=buildExamQuestions();
@@ -1108,7 +1170,8 @@ function startExam(){
 function tickExamTimer(){
   if(!S.exam||S.exam.submitted){clearInterval(examInterval);return;}
   var elapsed=Math.floor((Date.now()-S.exam.startTime)/1000);
-  var rem=Math.max(0,EXAM_SECS-elapsed);
+  var totalSecs=S.exam.customSecs||EXAM_SECS;
+  var rem=Math.max(0,totalSecs-elapsed);
   var el=document.getElementById('examTimerEl');
   if(el){
     var m=Math.floor(rem/60),s=rem%60;
@@ -1202,8 +1265,17 @@ function rQuiz(m){
   var prevQ=fi>0?QS.findIndex(function(qq){return qq.id===fqs[fi-1].id;}):null;
   var nextQ=fi<fqs.length-1?QS.findIndex(function(qq){return qq.id===fqs[fi+1].id;}):null;
 
-  // Category filter bar
+  // Guest banner
   var h='';
+  if(IS_GUEST){
+    h+='<div class="guest-banner">'
+      +'<span style="font-size:20px">&#128100;</span>'
+      +'<div class="guest-banner-txt"><strong>You're browsing as a guest.</strong> '
+      +'You can view and answer all questions, but your progress won't be saved. '
+      +'<a href="#" onclick="IS_GUEST=false;document.getElementById(\'hdrEl\').style.display=\'none\';document.getElementById(\'authOverlay\').style.display=\'\';event.preventDefault()" style="color:var(--acc);font-weight:700">Sign in or create an account</a> to track your results.</div>'
+      +'</div>';
+  }
+  // Category filter bar
   if(S.categoryList&&S.categoryList.length){
     h+='<div class="cat-bar"><span class="cat-bar-label">&#127991; Filter:</span>';
     h+='<span class="cat-pill all-pill'+(S.activeCat==='all'?' active':'')+'" onclick="S.activeCat=\'all\';S.idx=0;rst();render()">All ('+QS.length+')</span>';
@@ -1491,9 +1563,11 @@ function rExam(m){
   if(S.exam.submitted){rExamResults(m);return;}
   var q=S.exam.questions[S.exam.idx];
   var elapsed=Math.floor((Date.now()-S.exam.startTime)/1000);
-  var rem=Math.max(0,EXAM_SECS-elapsed);
+  var _es=S.exam.customSecs||EXAM_SECS;
+  var rem=Math.max(0,_es-elapsed);
   var remM=Math.floor(rem/60),remS=rem%60;
-  var timerCls='exam-timer'+(rem<300?' crit':rem<600?' warn':'');
+  var totalSecs2=S.exam.customSecs||EXAM_SECS;
+  var timerCls='exam-timer'+(rem<totalSecs2*0.1?' crit':rem<totalSecs2*0.2?' warn':'');
   var answered=Object.keys(S.exam.answers).length;
   var isFlagged=S.exam.flagged[q.id];
 
@@ -1972,229 +2046,68 @@ function clearExplanations() {
 // ── Sync / Account view ────────────────────────────────────────────────────
 
 function rSync(m) {
-  var n = Object.keys(S.explanations || {}).length;
-  var filled = QS.filter(function(q) { return S.explanations[q.id]; }).length;
-
-  // Build using DOM — no string escaping issues at all
   var root = document.createElement('div');
 
-  // Tabs
-  root.innerHTML = tabs('sync');
-
-  // Account section
-  var acc = document.createElement('div');
-  acc.className = 'h2';
-  acc.textContent = 'Account';
-  var adminRow = document.createElement('div');
-  adminRow.style.marginTop = '10px';
-  var adminBtn = document.createElement('button');
-  adminBtn.className = 'btn' + (S.adminMode ? ' btn-pri' : '');
-  adminBtn.innerHTML = S.adminMode ? '&#128275; Admin mode ON — click to exit' : '&#128272; Admin mode';
-  adminBtn.onclick = toggleAdmin;
-  adminRow.appendChild(adminBtn);
-  if (S.adminMode) {
-    var aNote = document.createElement('span');
-    aNote.style.cssText = 'font-size:12px;color:var(--acc);margin-left:10px;font-weight:700';
-    aNote.textContent = 'Edit buttons now visible on every question';
-    adminRow.appendChild(aNote);
-    var addQBtn = document.createElement('button');
-    addQBtn.className = 'btn btn-pri';
-    addQBtn.style.cssText = 'margin-left:10px;font-size:13px';
-    addQBtn.innerHTML = '&#10010; Add Question';
-    addQBtn.onclick = openAddQuestionModal;
-    adminRow.appendChild(addQBtn);
-
-    // Migrate seed → DB button (shown only if DB questions might be missing)
-    var migrateBtn = document.createElement('button');
-    migrateBtn.className = 'btn';
-    migrateBtn.style.cssText = 'margin-left:6px;font-size:12px';
-    migrateBtn.innerHTML = '&#128190; Push '+QS.length+' questions to DB';
-    migrateBtn.title = 'Publish current question set to the database so all users load from DB';
-    migrateBtn.onclick = function(){
-      if(!confirm('Push all '+QS.length+' current questions to the database?\nThis makes the DB the single source of truth for all users.'))return;
-      migrateBtn.disabled=true;migrateBtn.textContent='Saving…';
-      saveContent().then(function(ok){
-        migrateBtn.textContent=ok?'&#10003; Pushed!':'⚠ Failed';
-        migrateBtn.style.color=ok?'var(--ok-txt)':'var(--err-txt)';
-      });
-    };
-    adminRow.appendChild(migrateBtn);
+  // ── GUEST: show sign-in prompt ──────────────────────────────────────────
+  if(IS_GUEST){
+    var guestCard=document.createElement('div');
+    guestCard.className='try-sec';
+    guestCard.innerHTML='<div style="text-align:center;padding:20px 10px">'
+      +'<div style="font-size:40px;margin-bottom:12px">&#128274;</div>'
+      +'<div style="font-size:16px;font-weight:700;margin-bottom:8px">Create a free account</div>'
+      +'<p style="font-size:13px;color:var(--muted);line-height:1.7;margin-bottom:18px">'
+      +'Sign up to save your progress, track which questions you got right or wrong across multiple tries, and sync across devices.</p>'
+      +'<button class="btn-acc" onclick="IS_GUEST=false;document.getElementById(\'hdrEl\').style.display=\'none\';document.getElementById(\'authOverlay\').style.display=\'\';AUTH_MODE=\'signup\';document.getElementById(\'authDesc\').textContent=\'Create your account\';document.getElementById(\'authBtn\').textContent=\'Create account\';document.getElementById(\'authSwitch\').textContent=\'Already have an account? Sign in\'">Create Account &#8594;</button>'
+      +'<div style="margin-top:10px"><button class="link-btn" style="font-size:12px" onclick="IS_GUEST=false;document.getElementById(\'hdrEl\').style.display=\'none\';document.getElementById(\'authOverlay\').style.display=\'\';AUTH_MODE=\'signin\';document.getElementById(\'authDesc\').textContent=\'Sign in with your username and password.\'">Already have an account? Sign in</button></div>'
+      +'</div>';
+    root.appendChild(guestCard);
+    m.innerHTML='';m.appendChild(root);return;
   }
-  root.appendChild(adminRow);
-  root.appendChild(acc);
 
-  var accCard = document.createElement('div');
-  accCard.className = 'try-sec';
-  accCard.innerHTML = '<p style="font-size:14px;margin-bottom:4px">Signed in as <strong>' + esc(USERNAME||'?') + '</strong></p>'
-    + '<p style="font-size:13px;color:var(--muted);margin-bottom:14px;line-height:1.6">'
-    + 'Progress syncs automatically. On any new device: open the app and sign in with the same username and password.</p>';
-  var signoutBtn = document.createElement('button');
-  signoutBtn.className = 'btn';
-  signoutBtn.textContent = 'Sign out';
-  signoutBtn.onclick = signOut;
-  accCard.appendChild(signoutBtn);
-  root.appendChild(accCard);
-
-  // Explanations / Import section
-  var h2 = document.createElement('div');
-  h2.className = 'h2';
-  h2.style.marginTop = '18px';
-  h2.innerHTML = '&#128196; Questions &amp; Explanations';
-  root.appendChild(h2);
-
-  var expCard = document.createElement('div');
-  expCard.className = 'try-sec';
-
+  // ── Logged-in user ──────────────────────────────────────────────────────
+  var filled = QS.filter(function(q) { return S.explanations[q.id]; }).length;
   var customCount = (function(){
-    var staticIds=new Set(JSON.parse(document.getElementById('qdata').textContent).map(function(q){return q.id;}));
+    var staticIds=new Set(_SEED_QS.map(function(q){return q.id;}));
     return QS.filter(function(q){return !staticIds.has(q.id);}).length;
   })();
 
-  var intro = document.createElement('p');
-  intro.style.cssText = 'font-size:13px;color:var(--muted);line-height:1.7;margin-bottom:12px';
-  intro.innerHTML = 'Upload a JSON file to <strong>add new questions</strong> or <strong>fill explanations</strong>. '
-    + 'Download the current set, edit it (or use an AI to fill explanations), then upload back.';
-  expCard.appendChild(intro);
+  // Account info
+  var accCard=document.createElement('div');
+  accCard.className='try-sec';
+  accCard.innerHTML='<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">'
+    +'<div style="font-size:28px">&#128100;</div>'
+    +'<div><div style="font-size:15px;font-weight:700">'+esc(USERNAME)+'</div>'
+    +'<div style="font-size:12px;color:var(--muted)">Signed in</div></div>'
+    +'<button class="btn" style="margin-left:auto;font-size:12px" onclick="signOut()">Sign out</button>'
+    +'</div>'
+    +'<div style="display:flex;align-items:center;gap:5px;margin-top:8px">'
+    +'<span class="sync-dot" id="syncDot2"></span>'
+    +'<span id="syncTxt2" style="font-size:12px;color:var(--muted)"></span>'
+    +'</div>';
+  root.appendChild(accCard);
 
-  // Status badge
-  var status = document.createElement('div');
-  status.style.cssText = 'background:var(--surf2);border-radius:var(--rs);padding:10px 13px;margin-bottom:14px;font-size:13px;line-height:1.5;display:flex;flex-direction:column;gap:4px';
-  var statusHtml = '';
-  statusHtml += '<span><strong>&#128218; Total questions:</strong> '+QS.length+'</span>';
-  if (customCount > 0) statusHtml += '<span style="color:var(--info-txt)">&#10010; '+customCount+' custom question'+(customCount>1?'s':'')+' (uploaded)</span>';
-  if (filled > 0) {
-    statusHtml += '<span style="color:var(--ok-txt)">&#9989; '+filled+' / '+QS.length+' explanations loaded — show instantly, no API needed.</span>';
-  } else {
-    statusHtml += '<span style="color:var(--muted)">&#9888;&#65039; No offline explanations. Upload a filled JSON to enable them.</span>';
-  }
-  status.innerHTML = statusHtml;
-  expCard.appendChild(status);
-
-  // Buttons row
-  var btnRow = document.createElement('div');
-  btnRow.style.cssText = 'display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px';
-
-  var dlBtn = document.createElement('button');
-  dlBtn.className = 'btn btn-pri';
-  dlBtn.innerHTML = '&#11015; Download current JSON';
-  dlBtn.onclick = exportJSON;
-  btnRow.appendChild(dlBtn);
-
-  var ulBtn = document.createElement('button');
-  ulBtn.className = 'btn';
-  ulBtn.innerHTML = '&#11014; Upload JSON (questions &amp; explanations)';
-  ulBtn.onclick = triggerImport;
-  btnRow.appendChild(ulBtn);
-
-  if (filled > 0) {
-    var clrBtn = document.createElement('button');
-    clrBtn.className = 'btn';
-    clrBtn.innerHTML = '🗑 Clear';
-    clrBtn.onclick = clearExplanations;
-    btnRow.appendChild(clrBtn);
-  }
-  expCard.appendChild(btnRow);
-
-  // Hidden file input
-  var fileInput = document.createElement('input');
-  fileInput.type = 'file';
-  fileInput.id = 'importFileInput';
-  fileInput.accept = '.json';
-  fileInput.style.display = 'none';
-  fileInput.onchange = function() { handleImportFile(this); };
-  expCard.appendChild(fileInput);
-
-  // Message area
-  var msgDiv = document.createElement('div');
-  msgDiv.id = 'importMsg';
-  msgDiv.style.cssText = 'font-size:13px;min-height:18px';
-  expCard.appendChild(msgDiv);
-
-  root.appendChild(expCard);
-
-  // How-to steps
-  var h2b = document.createElement('div');
-  h2b.className = 'h2';
-  h2b.style.marginTop = '14px';
-  h2b.innerHTML = '&#128218; How to use Import / Export';
-  root.appendChild(h2b);
-
-  var howCard = document.createElement('div');
-  howCard.className = 'try-sec';
-  howCard.innerHTML = '<p style="font-size:13px;font-weight:700;margin-bottom:6px;color:var(--text)">Adding new questions:</p>'
-    + '<ol style="font-size:13px;color:var(--muted);line-height:2;padding-left:20px;margin-bottom:14px">'
-    + '<li>Create a JSON file with an array of question objects (see format below)</li>'
-    + '<li>Click <strong>Upload JSON</strong> — new questions are added immediately &amp; synced to cloud</li>'
-    + '<li>Custom questions appear in the quiz alongside built-in ones, sorted by ID</li>'
-    + '</ol>'
-    + '<p style="font-size:13px;font-weight:700;margin-bottom:6px;color:var(--text)">Adding explanations:</p>'
-    + '<ol style="font-size:13px;color:var(--muted);line-height:2;padding-left:20px;margin-bottom:14px">'
-    + '<li>Click <strong>Download JSON</strong> — the file contains all ' + QS.length + ' questions</li>'
-    + '<li>Paste batches of ~40 into ChatGPT/Gemini and ask it to fill the <code style="background:var(--surf2);padding:1px 5px;border-radius:3px">explanation</code> field</li>'
-    + '<li>Upload the filled file — explanations appear instantly, no API call needed</li>'
-    + '</ol>'
-    + '<p style="font-size:13px;font-weight:700;margin-bottom:6px;color:var(--text)">&#128196; Question JSON format:</p>'
-    + '<pre style="font-size:11px;background:var(--surf2);border-radius:var(--rs);padding:12px;overflow-x:auto;line-height:1.6;border:1px solid var(--bdr)">'
-    + '// Single or multi-choice:\n'
-    + '{\n'
-    + '  &quot;id&quot;: 400,\n'
-    + '  &quot;type&quot;: &quot;single&quot;,    // or &quot;multi&quot;\n'
-    + '  &quot;stem&quot;: &quot;Question text here?&quot;,\n'
-    + '  &quot;options&quot;: {&quot;A&quot;: &quot;First option&quot;, &quot;B&quot;: &quot;Second&quot;, &quot;C&quot;: &quot;Third&quot;},\n'
-    + '  &quot;correct&quot;: [&quot;B&quot;]       // array, even for single\n'
-    + '}\n\n'
-    + '// Ordering:\n'
-    + '{\n'
-    + '  &quot;id&quot;: 401, &quot;type&quot;: &quot;ordering&quot;,\n'
-    + '  &quot;stem&quot;: &quot;Put these in order&quot;,\n'
-    + '  &quot;items&quot;: [&quot;Step A&quot;, &quot;Step B&quot;, &quot;Step C&quot;],\n'
-    + '  &quot;correct&quot;: [&quot;Step A&quot;, &quot;Step B&quot;, &quot;Step C&quot;]\n'
-    + '}\n\n'
-    + '// Matching:\n'
-    + '{\n'
-    + '  &quot;id&quot;: 402, &quot;type&quot;: &quot;matching&quot;,\n'
-    + '  &quot;stem&quot;: &quot;Match each item&quot;,\n'
-    + '  &quot;options&quot;: [&quot;Option X&quot;, &quot;Option Y&quot;],\n'
-    + '  &quot;pairs&quot;: [\n'
-    + '    {&quot;description&quot;: &quot;Item 1&quot;, &quot;correct&quot;: &quot;Option X&quot;},\n'
-    + '    {&quot;description&quot;: &quot;Item 2&quot;, &quot;correct&quot;: &quot;Option Y&quot;}\n'
-    + '  ]\n'
-    + '}'
-    + '</pre>';
-  root.appendChild(howCard);
-
-  // Category management section
-  var h2cat = document.createElement('div');
-  h2cat.className = 'h2';
-  h2cat.style.marginTop = '14px';
-  h2cat.innerHTML = '&#127991; Category Management';
-  root.appendChild(h2cat);
-
-  var catCard = document.createElement('div');
-  catCard.className = 'try-sec';
-
+  // ── Category Management (visible to all — read-only for non-admins) ──────
   if(S.categoryList && S.categoryList.length){
-    var catIntro = document.createElement('p');
-    catIntro.style.cssText = 'font-size:13px;color:var(--muted);line-height:1.6;margin-bottom:12px';
-    catIntro.textContent = 'Admin-managed categories are shared with all users. Click Study to filter the quiz by category.';
-    catCard.appendChild(catIntro);
+    var h2cat = document.createElement('div');
+    h2cat.className = 'h2';
+    h2cat.style.marginTop = '14px';
+    h2cat.innerHTML = '&#127991; Categories';
+    root.appendChild(h2cat);
 
+    var catCard = document.createElement('div');
+    catCard.className = 'try-sec';
     var catGrid = document.createElement('div');
     catGrid.style.cssText = 'display:flex;flex-direction:column;gap:8px';
-
     S.categoryList.forEach(function(cat){
       var count = QS.filter(function(q){ return hasCat(q.id, cat); }).length;
       var row = document.createElement('div');
       row.style.cssText = 'display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--surf2);border-radius:var(--rs);border:1px solid var(--bdr)';
-
       var nameSpan = document.createElement('span');
       nameSpan.style.cssText = 'flex:1;font-size:14px;font-weight:600';
       nameSpan.textContent = cat;
-
       var countSpan = document.createElement('span');
       countSpan.style.cssText = 'font-size:12px;color:var(--muted)';
       countSpan.textContent = count + ' question' + (count !== 1 ? 's' : '');
-
       var studyBtn = document.createElement('button');
       studyBtn.className = 'btn btn-pri';
       studyBtn.style.fontSize = '12px';
@@ -2205,46 +2118,144 @@ function rSync(m) {
         if(first){ S.idx = QS.findIndex(function(qq){ return qq.id === first.id; }); }
         rst(); setView('quiz');
       };})(cat);
-
-      var delBtn = document.createElement('button');
-      delBtn.className = 'btn';
-      delBtn.style.cssText = 'color:var(--err-txt);border-color:var(--err);font-size:12px';
-      delBtn.innerHTML = '&#128465;';
-      delBtn.title = 'Delete category';
-      delBtn.onclick = (function(c){ return function(){
-        if(confirm('Delete category "' + c + '"? Questions will be untagged but not deleted.')){ deleteCat(c); }
-      };})(cat);
-
-      row.appendChild(nameSpan);
-      row.appendChild(countSpan);
-      row.appendChild(studyBtn);
-      row.appendChild(delBtn);
+      row.appendChild(nameSpan); row.appendChild(countSpan); row.appendChild(studyBtn);
+      if(S.adminMode){
+        var delBtn = document.createElement('button');
+        delBtn.className = 'btn';
+        delBtn.style.cssText = 'color:var(--err-txt);border-color:var(--err);font-size:12px';
+        delBtn.innerHTML = '&#128465;';
+        delBtn.title = 'Delete category';
+        delBtn.onclick = (function(c){ return function(){
+          if(confirm('Delete category "' + c + '"?')){ deleteCat(c); }
+        };})(cat);
+        row.appendChild(delBtn);
+      }
       catGrid.appendChild(row);
     });
     catCard.appendChild(catGrid);
-  } else {
-    var noCat = document.createElement('p');
-    noCat.style.cssText = 'font-size:13px;color:var(--muted);line-height:1.6';
-    noCat.innerHTML = 'No categories yet. Tag questions in the <strong>Study</strong> tab using the &#127991; Tag button on any question.';
-    catCard.appendChild(noCat);
+    root.appendChild(catCard);
   }
-  root.appendChild(catCard);
 
-  // Active recall tip
+  // ── ADMIN SECTION ───────────────────────────────────────────────────────
+  var adminH2 = document.createElement('div');
+  adminH2.className = 'h2';
+  adminH2.style.marginTop = '14px';
+  adminH2.innerHTML = '&#128272; Admin';
+  root.appendChild(adminH2);
+
+  var adminCard = document.createElement('div');
+  adminCard.className = 'try-sec';
+
+  var adminRow = document.createElement('div');
+  adminRow.style.cssText = 'display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:' + (S.adminMode?'14px':'0');
+  var adminBtn = document.createElement('button');
+  adminBtn.className = 'btn' + (S.adminMode ? ' btn-pri' : '');
+  adminBtn.innerHTML = S.adminMode ? '&#128275; Admin mode ON — click to exit' : '&#128272; Enable admin mode';
+  adminBtn.onclick = toggleAdmin;
+  adminRow.appendChild(adminBtn);
+
+  if (S.adminMode) {
+    var aNote = document.createElement('span');
+    aNote.style.cssText = 'font-size:12px;color:var(--acc);font-weight:700';
+    aNote.textContent = 'Edit/Delete/Tag buttons active on every question';
+    adminRow.appendChild(aNote);
+    var addQBtn = document.createElement('button');
+    addQBtn.className = 'btn btn-pri';
+    addQBtn.style.cssText = 'font-size:13px';
+    addQBtn.innerHTML = '&#10010; Add Question';
+    addQBtn.onclick = openAddQuestionModal;
+    adminRow.appendChild(addQBtn);
+    var migrateBtn = document.createElement('button');
+    migrateBtn.className = 'btn';
+    migrateBtn.style.cssText = 'font-size:12px';
+    migrateBtn.innerHTML = '&#128190; Push '+QS.length+' questions to DB';
+    migrateBtn.title = 'Publish current question set to DB';
+    migrateBtn.onclick = function(){
+      if(!confirm('Push all '+QS.length+' questions to the database?'))return;
+      migrateBtn.disabled=true;migrateBtn.textContent='Saving…';
+      saveContent().then(function(ok){
+        migrateBtn.textContent=ok?'✓ Pushed!':'⚠ Failed';
+        migrateBtn.style.color=ok?'var(--ok-txt)':'var(--err-txt)';
+      });
+    };
+    adminRow.appendChild(migrateBtn);
+  }
+  adminCard.appendChild(adminRow);
+
+  // Questions & Explanations (admin only)
+  if(S.adminMode){
+    var sep=document.createElement('div');
+    sep.style.cssText='border-top:1px solid var(--bdr);margin:12px 0';
+    adminCard.appendChild(sep);
+
+    var qStatus = document.createElement('div');
+    qStatus.style.cssText = 'background:var(--surf2);border-radius:var(--rs);padding:10px 13px;margin-bottom:14px;font-size:13px;display:flex;flex-direction:column;gap:4px';
+    var statusHtml = '<span><strong>&#128218; Questions in DB:</strong> '+QS.length+'</span>';
+    if(customCount>0)statusHtml+='<span style="color:var(--info-txt)">&#10010; '+customCount+' custom (uploaded)</span>';
+    statusHtml+=filled>0
+      ?'<span style="color:var(--ok-txt)">&#9989; '+filled+'/'+QS.length+' explanations loaded</span>'
+      :'<span style="color:var(--muted)">&#9888;&#65039; No offline explanations — upload a filled JSON</span>';
+    qStatus.innerHTML=statusHtml;
+    adminCard.appendChild(qStatus);
+
+    // Download/Upload buttons
+    var btnRow=document.createElement('div');
+    btnRow.style.cssText='display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px';
+    var dlBtn=document.createElement('button');dlBtn.className='btn';dlBtn.innerHTML='&#11015; Download current JSON';dlBtn.onclick=exportJSON;
+    var ulBtn=document.createElement('button');ulBtn.className='btn btn-pri';ulBtn.innerHTML='&#11014; Upload JSON (questions & explanations)';
+    ulBtn.onclick=triggerImport;
+    btnRow.appendChild(dlBtn);btnRow.appendChild(ulBtn);
+    adminCard.appendChild(btnRow);
+
+    var fileInput=document.createElement('input');
+    fileInput.type='file';fileInput.accept='.json';fileInput.style.display='none';
+    fileInput.id='importFileInput';
+    fileInput.onchange=function(){handleImportFile(this);};
+    adminCard.appendChild(fileInput);
+
+    var importMsg=document.createElement('div');
+    importMsg.id='importMsg';importMsg.style.cssText='font-size:13px;min-height:16px;margin-bottom:12px';
+    adminCard.appendChild(importMsg);
+
+    // How-to format reference
+    var fmtToggle=document.createElement('button');
+    fmtToggle.className='link-btn';fmtToggle.style.fontSize='12px';
+    fmtToggle.textContent='Show JSON format reference ▾';
+    fmtToggle.onclick=function(){
+      var ref=document.getElementById('jsonFmtRef');
+      ref.style.display=ref.style.display==='none'?'block':'none';
+      fmtToggle.textContent=ref.style.display==='none'?'Show JSON format reference ▾':'Hide JSON format reference ▴';
+    };
+    adminCard.appendChild(fmtToggle);
+    var fmtRef=document.createElement('div');
+    fmtRef.id='jsonFmtRef';fmtRef.style.display='none';
+    fmtRef.innerHTML='<pre style="font-size:11px;background:var(--surf2);border-radius:var(--rs);padding:12px;overflow-x:auto;line-height:1.6;border:1px solid var(--bdr);margin-top:8px">'
+      +'// Single or multi-choice:\n{ &quot;id&quot;:400, &quot;type&quot;:&quot;single&quot;, &quot;stem&quot;:&quot;Question?&quot;,\n'
+      +'  &quot;options&quot;:{&quot;A&quot;:&quot;...&quot;,&quot;B&quot;:&quot;...&quot;}, &quot;correct&quot;:[&quot;A&quot;] }\n\n'
+      +'// Ordering:\n{ &quot;id&quot;:401, &quot;type&quot;:&quot;ordering&quot;,\n'
+      +'  &quot;items&quot;:[&quot;Step A&quot;,&quot;Step B&quot;,&quot;Step C&quot;], &quot;correct&quot;:[&quot;Step A&quot;,&quot;Step B&quot;,&quot;Step C&quot;] }\n\n'
+      +'// Matching:\n{ &quot;id&quot;:402, &quot;type&quot;:&quot;matching&quot;, &quot;options&quot;:[&quot;X&quot;,&quot;Y&quot;],\n'
+      +'  &quot;pairs&quot;:[{&quot;description&quot;:&quot;Item&quot;,&quot;correct&quot;:&quot;X&quot;}] }</pre>';
+    adminCard.appendChild(fmtRef);
+  }
+
+  root.appendChild(adminCard);
+
+  // ── Active recall tip ────────────────────────────────────────────────────
   var h2c = document.createElement('div');
   h2c.className = 'h2';
   h2c.style.marginTop = '14px';
-  h2c.textContent = '🧠 Best study method: active recall';
+  h2c.textContent = '💡 Study Tips';
   root.appendChild(h2c);
 
   var tipCard = document.createElement('div');
   tipCard.className = 'try-sec';
-  tipCard.innerHTML = '<p style="font-size:13px;color:var(--muted);line-height:1.8">'
-    + 'Research consistently shows that <strong>active recall</strong> (forcing yourself to retrieve an answer before seeing it) '
-    + 'builds far stronger memory than passively re-reading answers. '
-    + 'Use the <strong>Practice missed questions</strong> button in the Focus tab — it makes you answer fresh before revealing the result. '
-    + 'Combine with <strong>spaced repetition</strong>: review missed questions the next day, then 3 days later, then a week later. '
-    + 'The Focus tab sorts by most-missed to prioritise your weakest areas automatically.</p>';
+  tipCard.innerHTML = '<p style="font-size:13px;color:var(--muted);line-height:1.7">'
+    + '<strong>Active recall:</strong> Try to answer before revealing the explanation. '
+    + 'Use <strong>Focus</strong> to drill questions you get wrong. '
+    + 'Use <strong>+Try</strong> to start a fresh attempt while keeping your history. '
+    + (IS_GUEST ? '' : 'Your progress auto-saves to the cloud every second.')
+    + '</p>';
   root.appendChild(tipCard);
 
   m.innerHTML = '';
@@ -2252,232 +2263,3 @@ function rSync(m) {
 }
 
 
-
-function tabs(active){
-  var t=[['quiz','&#128221; Study'],['stats','&#128202; Stats'],['focus','&#127919; Focus'],['examSetup','&#127891; Exam'],['sync','&#128279; Account']];
-  var h='<div class="vtabs">';t.forEach(function(x){h+='<button class="vtab'+(active===x[0]?' act':'')+'" onclick="setView(\''+x[0]+'\')">'+x[1]+'</button>';});return h+'</div>';
-}
-
-// ── Boot ───────────────────────────────────────────────────────────────────
-
-
-// ── ADMIN MODE ──────────────────────────────────────────────────────────────
-var ADMIN_PWD = 'awsquiz2025'; // change this if you want
-
-function toggleAdmin() {
-  if (S.adminMode) {
-    S.adminMode = false;
-    render();
-    return;
-  }
-  var pwd = prompt('Enter admin password:');
-  if (pwd === ADMIN_PWD) {
-    S.adminMode = true;
-    alert('Admin mode ON. Edit buttons now appear on each question.');
-    render();
-  } else if (pwd !== null) {
-    alert('Wrong password.');
-  }
-}
-
-// Get corrected version of a question (admin edits override original data)
-function getQ(q) {
-  var c = S.corrections[q.id];
-  if (!c) return q;
-  var out = Object.assign({}, q);
-  if (c.stem)    out.stem = c.stem;
-  if (c.options) out.options = Object.assign({}, q.options, c.options);
-  return out;
-}
-
-// ── Admin edit modal ─────────────────────────────────────────────────────────
-function openEditModal(qid) {
-  var orig = QS.find(function(q){ return q.id === qid; });
-  if (!orig) return;
-  var q    = getQ(orig);
-  var corr = S.corrections[qid] || {};
-  var exp  = S.explanations[qid] || {};
-
-  // Remove any existing modal
-  var existing = document.getElementById('adminModal');
-  if (existing) existing.remove();
-
-  var overlay = document.createElement('div');
-  overlay.id = 'adminModal';
-  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:200;display:flex;align-items:flex-start;justify-content:center;padding:16px;overflow-y:auto';
-
-  var modal = document.createElement('div');
-  modal.style.cssText = 'background:var(--surf);border-radius:10px;padding:22px;max-width:640px;width:100%;border:1px solid var(--bdr2);margin-top:20px';
-
-  // Header
-  var hdr = document.createElement('div');
-  hdr.style.cssText = 'display:flex;align-items:center;justify-content:space-between;margin-bottom:16px';
-  hdr.innerHTML = '<strong style="font-size:15px">✏️ Edit Q' + qid + ' — ' + q.type.toUpperCase() + '</strong>';
-  var closeBtn = document.createElement('button');
-  closeBtn.textContent = '✕ Close';
-  closeBtn.className = 'btn';
-  closeBtn.onclick = function(){ overlay.remove(); };
-  hdr.appendChild(closeBtn);
-  modal.appendChild(hdr);
-
-  function field(label, id, value, big) {
-    var wrap = document.createElement('div');
-    wrap.style.marginBottom = '12px';
-    var lbl = document.createElement('div');
-    lbl.style.cssText = 'font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px';
-    lbl.textContent = label;
-    wrap.appendChild(lbl);
-    var inp = document.createElement(big ? 'textarea' : 'input');
-    inp.id = id;
-    inp.value = value;
-    inp.style.cssText = 'width:100%;border:1px solid var(--bdr2);border-radius:var(--rs);background:var(--surf2);color:var(--text);padding:8px 10px;font-size:13px;font-family:inherit;resize:vertical';
-    if (big) { inp.rows = 3; }
-    wrap.appendChild(inp);
-    return wrap;
-  }
-
-  // Stem
-  modal.appendChild(field('Question Text (stem)', 'ed_stem', q.stem, true));
-
-  // Options
-  if (q.options && typeof q.options === 'object') {
-    var optHdr = document.createElement('div');
-    optHdr.style.cssText = 'font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px';
-    optHdr.textContent = 'Answer Options';
-    modal.appendChild(optHdr);
-    Object.keys(q.options).forEach(function(k) {
-      var isCorrect = orig.correct && orig.correct.includes(k);
-      modal.appendChild(field(k + (isCorrect ? ' ✓ CORRECT' : ''), 'ed_opt_' + k, q.options[k], false));
-    });
-  }
-
-  // Explanation section
-  var expHdr = document.createElement('div');
-  expHdr.style.cssText = 'font-size:12px;font-weight:700;margin:14px 0 8px;padding-top:12px;border-top:1px solid var(--bdr)';
-  expHdr.textContent = '💡 Explanation';
-  modal.appendChild(expHdr);
-
-  modal.appendChild(field('Concept (key idea)', 'ed_exp_concept', exp.concept || '', false));
-
-  if (q.type === 'single' || q.type === 'multi') {
-    Object.keys(q.options || {}).forEach(function(k) {
-      var e = exp[k] || {};
-      modal.appendChild(field(k + ' — explanation (why right or wrong)', 'ed_exp_' + k, e.why || '', true));
-    });
-  } else if (q.type === 'matching') {
-    (exp.explanations || []).forEach(function(e, i) {
-      modal.appendChild(field('Match ' + (i+1) + ' explanation', 'ed_exp_match_' + i, e.why || '', false));
-    });
-    if (!(exp.explanations||[]).length) {
-      var note = document.createElement('p');
-      note.style.cssText = 'font-size:12px;color:var(--muted)';
-      note.textContent = 'Upload explanations via JSON first to enable inline editing for matching questions.';
-      modal.appendChild(note);
-    }
-  } else if (q.type === 'ordering') {
-    (exp.steps || []).forEach(function(s, i) {
-      modal.appendChild(field('Step ' + (i+1) + ' explanation', 'ed_exp_step_' + i, s.why || '', false));
-    });
-  }
-
-  // Save button
-  var saveBtn = document.createElement('button');
-  saveBtn.className = 'btn-acc';
-  saveBtn.textContent = '💾 Save changes to cloud';
-  saveBtn.style.marginTop = '16px';
-  saveBtn.onclick = function() { saveEditModal(qid, orig, exp); };
-  modal.appendChild(saveBtn);
-
-  var statusDiv = document.createElement('div');
-  statusDiv.id = 'editStatus';
-  statusDiv.style.cssText = 'margin-top:10px;font-size:13px;min-height:18px';
-  modal.appendChild(statusDiv);
-
-  overlay.appendChild(modal);
-  // Click outside to close
-  overlay.onclick = function(e) { if (e.target === overlay) overlay.remove(); };
-  document.body.appendChild(overlay);
-}
-
-async function saveEditModal(qid, orig, oldExp) {
-  var statusEl = document.getElementById('editStatus');
-  if (statusEl) { statusEl.textContent = 'Saving\u2026'; statusEl.style.color = 'var(--muted)'; }
-
-  // Collect corrections (question text + options)
-  var c = {};
-  var stemEl = document.getElementById('ed_stem');
-  if (stemEl && stemEl.value !== orig.stem) c.stem = stemEl.value;
-
-  if (orig.options && typeof orig.options === 'object') {
-    var optCorr = {};
-    Object.keys(orig.options).forEach(function(k) {
-      var el = document.getElementById('ed_opt_' + k);
-      if (el && el.value !== orig.options[k]) optCorr[k] = el.value;
-    });
-    if (Object.keys(optCorr).length) c.options = optCorr;
-  }
-
-  if (Object.keys(c).length) {
-    S.corrections[qid] = Object.assign(S.corrections[qid] || {}, c);
-  }
-
-  // Collect explanation
-  var conceptEl = document.getElementById('ed_exp_concept');
-  var concept = conceptEl ? conceptEl.value.trim() : (oldExp.concept || '');
-
-  var newExp = Object.assign({}, oldExp);
-  newExp.concept = concept;
-
-  if (orig.type === 'single' || orig.type === 'multi') {
-    Object.keys(orig.options || {}).forEach(function(k) {
-      var el = document.getElementById('ed_exp_' + k);
-      if (el) {
-        newExp[k] = newExp[k] || {};
-        newExp[k].why = el.value;
-        newExp[k].ok  = orig.correct && orig.correct.includes(k);
-      }
-    });
-  } else if (orig.type === 'matching') {
-    (oldExp.explanations || []).forEach(function(e, i) {
-      var el = document.getElementById('ed_exp_match_' + i);
-      if (el) { newExp.explanations[i] = Object.assign({}, e, {why: el.value}); }
-    });
-  } else if (orig.type === 'ordering') {
-    (oldExp.steps || []).forEach(function(s, i) {
-      var el = document.getElementById('ed_exp_step_' + i);
-      if (el) { newExp.steps[i] = Object.assign({}, s, {why: el.value}); }
-    });
-  }
-
-  if (concept || Object.keys(newExp).length > 1) {
-    S.explanations[qid] = newExp;
-    S.cache[qid] = newExp;
-  }
-
-  var ok = await saveContent();
-  if (statusEl) {
-    statusEl.style.color = ok ? 'var(--ok-txt)' : 'var(--err-txt)';
-    statusEl.textContent = ok
-      ? '\u2713 Saved! Changes are now live for all users and devices.'
-      : '\u2717 Cloud save failed. Check connection and try again.';
-  }
-  // Update the live question text if we have corrections
-  if (S.corrections[qid]) render();
-}
-
-
-(async function boot(){
-  SB=supabase.createClient(SB_URL,SB_KEY);
-  try{
-    var sr=await SB.auth.getSession();
-    if(sr.data&&sr.data.session&&sr.data.session.user){
-      USERID=sr.data.session.user.id;USERNAME=localStorage.getItem('quiz_username')||sr.data.session.user.email.split('@')[0];
-      document.getElementById('authOverlay').style.display='none';document.getElementById('hdrEl').style.display='';
-      await startApp();return;
-    }
-  }catch(e){console.warn(e);}
-  var saved=localStorage.getItem('quiz_username');if(saved)document.getElementById('authUser').value=saved;
-})();
-</script>
-</body>
-</html>
