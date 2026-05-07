@@ -391,7 +391,7 @@ var _SEED_QS = JSON.parse(document.getElementById('qdata').textContent);
 var SB_URL = 'https://xhdwuacoilfigeqfmivx.supabase.co';
 var SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhoZHd1YWNvaWxmaWdlcWZtaXZ4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY1NDM5MjAsImV4cCI6MjA5MjExOTkyMH0.P7RI2PqXTgHBlYvHL4XonSNt72CAQr0kpEWGRcd_BcI';
 
-var SB=null, USERID=null, USERNAME=null, saveTimer=null, AUTH_MODE='signin';
+var SB=null, USERID=null, USERNAME=null, saveTimer=null, AUTH_MODE='signin', IS_GUEST=false;
 var examInterval=null;
 
 // Close try dropdown on outside click
@@ -1782,6 +1782,9 @@ function rExamSetup(m){
   }
   m.innerHTML=h;
 }
+
+// ── tabs() — kept for compatibility (hidden via CSS, nav is in header) ────────
+function tabs(active){return '';} // nav handled by header; this is a no-op stub
 
 // ── Stats ──────────────────────────────────────────────────────────────────
 function rStats(m){
