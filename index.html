@@ -30,28 +30,42 @@
 html,body{overflow-x:hidden;width:100%}
 body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;font-size:15px;line-height:1.65}
 
-/* ── HEADER: fixed-width slots, nothing can overflow ── */
+/* ── HEADER: two-row layout – title centred on top, full nav row below ── */
 .hdr{
   background:var(--surf);border-bottom:1px solid var(--bdr);
-  padding:0 10px;
-  display:flex;align-items:stretch;gap:0;
+  padding:0;
+  display:flex;flex-direction:column;
   position:sticky;top:0;z-index:30;
-  width:100%;overflow:hidden;min-height:48px;
+  width:100%;overflow:hidden;
 }
-.hdr-logo{font-weight:700;font-size:13px;color:var(--acc);white-space:nowrap;flex-shrink:0;
-  display:flex;align-items:center;padding:0 10px 0 2px;border-right:1px solid var(--bdr)}
-.hdr-logo em{color:var(--text);font-style:normal;font-weight:400}
-/* Nav tabs inside header */
-.hdr-nav{display:flex;align-items:stretch;flex:1;gap:0}
-.hnav{display:flex;align-items:center;padding:0 12px;font-size:12px;font-weight:700;
+/* Row 1 – centred quiz title */
+.hdr-title-row{
+  text-align:center;padding:4px 12px 3px;
+  border-bottom:1px solid var(--bdr);line-height:1;
+}
+.hdr-logo{
+  font-weight:800;font-size:10.5px;color:var(--acc);
+  letter-spacing:.07em;text-transform:uppercase;white-space:nowrap;
+  display:inline;
+}
+/* Row 2 – nav tabs + right controls */
+.hdr-bottom-row{
+  display:flex;align-items:stretch;min-height:38px;overflow:hidden;
+}
+/* Nav tabs */
+.hdr-nav{display:flex;align-items:stretch;flex:1;gap:0;overflow:hidden}
+.hnav{
+  display:flex;align-items:center;padding:0 7px;font-size:10.5px;font-weight:700;
   color:var(--muted);background:transparent;border:none;cursor:pointer;
-  border-bottom:3px solid transparent;white-space:nowrap;gap:5px;transition:color .15s}
+  border-bottom:3px solid transparent;white-space:nowrap;gap:3px;transition:color .15s;
+  flex-shrink:1;
+}
 .hnav:hover:not(.hnav-act){color:var(--text);background:var(--surf2)}
 .hnav.hnav-act{color:var(--acc);border-bottom-color:var(--acc)}
-.hnav.hnav-study{font-size:13px;color:var(--text)}
+.hnav.hnav-study{font-size:11px;color:var(--text)}
 .hnav.hnav-study.hnav-act{color:var(--acc)}
-/* Right side of header */
-.hdr-right{display:flex;align-items:center;gap:5px;padding-left:8px;flex-shrink:0;border-left:1px solid var(--bdr)}
+/* Right side */
+.hdr-right{display:flex;align-items:center;gap:4px;padding:0 6px;flex-shrink:0;border-left:1px solid var(--bdr)}
 .sync-dot{width:6px;height:6px;border-radius:50%;display:inline-block;flex-shrink:0}
 .dot-ok{background:var(--ok)}.dot-err{background:var(--err)}.dot-wait{background:var(--hint)}
 .hdr-sync{display:flex;align-items:center;gap:3px;font-size:11px;color:var(--muted);white-space:nowrap}
@@ -60,20 +74,19 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
   padding:12px 16px;margin-bottom:14px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
 .guest-banner-txt{flex:1;font-size:13px;color:var(--muted);line-height:1.5}
 .guest-banner-txt strong{color:var(--text)}
-/* sync text hidden on mobile, shown on wider */
+/* sync label – show on wider screens only */
 .sync-lbl{font-size:10px;color:var(--muted);white-space:nowrap;display:none}
-@media(min-width:500px){.sync-lbl{display:inline}}
-/* Try button replaces native select — no dropdown arrow clipping issues */
-.hdr-try{display:flex;align-items:center;gap:4px;margin-left:auto;flex-shrink:0}
+@media(min-width:560px){.sync-lbl{display:inline}}
+.hdr-try{display:flex;align-items:center;gap:3px;flex-shrink:0}
 .try-btn{
-  font-size:11px;font-weight:600;padding:4px 8px;
+  font-size:10px;font-weight:600;padding:3px 6px;
   border-radius:var(--rs);border:1px solid var(--bdr2);
   background:var(--surf2);color:var(--text);
-  cursor:pointer;white-space:nowrap;max-width:80px;overflow:hidden;text-overflow:ellipsis;
+  cursor:pointer;white-space:nowrap;
 }
 .try-btn:hover{background:var(--surf)}
-.hdr-actions{display:flex;align-items:center;gap:4px;flex-shrink:0}
-.hbtn{padding:5px 7px;border-radius:var(--rs);border:1px solid var(--bdr2);background:transparent;color:var(--text);font-size:12px;cursor:pointer;flex-shrink:0}
+.hdr-actions{display:flex;align-items:center;gap:3px;flex-shrink:0}
+.hbtn{padding:3px 6px;border-radius:var(--rs);border:1px solid var(--bdr2);background:transparent;color:var(--text);font-size:10px;cursor:pointer;flex-shrink:0}
 .hbtn:hover{background:var(--surf2)}
 .hbtn-pri{background:var(--text);color:var(--surf);border-color:var(--text);font-weight:700}
 .hbtn-pri:hover{opacity:.85;background:var(--text)}
@@ -81,7 +94,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 
 /* Try dropdown (custom, shown when try-btn clicked) */
 .try-dropdown{
-  position:absolute;top:46px;left:0;right:0;background:var(--surf);
+  position:absolute;top:64px;left:0;right:0;background:var(--surf);
   border-bottom:1px solid var(--bdr2);z-index:50;max-height:60vh;overflow-y:auto;
   display:none;box-shadow:0 4px 12px rgba(0,0,0,.15);
 }
@@ -358,21 +371,27 @@ input.jmp{border:1px solid var(--bdr2);border-radius:var(--rs);background:var(--
 
 <!-- Header / unified nav -->
 <div class="hdr" id="hdrEl" style="display:none">
-  <div class="hdr-logo">AWS <em>AI</em></div>
-  <nav class="hdr-nav" id="hdrNav">
-    <button class="hnav hnav-study hnav-act" id="hnav-quiz"    onclick="setView('quiz')">&#128221; Study</button>
-    <button class="hnav"                      id="hnav-stats"   onclick="setView('stats')">&#128202; Stats</button>
-    <button class="hnav"                      id="hnav-focus"   onclick="setView('focus')">&#127919; Focus</button>
-    <button class="hnav"                      id="hnav-examSetup" onclick="setView('examSetup')">&#127891; Exam</button>
-    <button class="hnav"                      id="hnav-sync"    onclick="setView('sync')">&#9881;&#65039; Account</button>
-  </nav>
-  <div class="hdr-right">
-    <div class="hdr-sync">
-      <span class="sync-dot dot-wait" id="syncDot"></span>
-      <span class="sync-lbl" id="syncTxt">&#8230;</span>
+  <!-- Row 1: centred title -->
+  <div class="hdr-title-row">
+    <span class="hdr-logo">AWS AI Practitioner</span>
+  </div>
+  <!-- Row 2: nav tabs + right controls -->
+  <div class="hdr-bottom-row">
+    <nav class="hdr-nav" id="hdrNav">
+      <button class="hnav hnav-study hnav-act" id="hnav-quiz"      onclick="setView('quiz')">&#128221; Study</button>
+      <button class="hnav"                      id="hnav-stats"     onclick="setView('stats')">&#128202; Stats</button>
+      <button class="hnav"                      id="hnav-focus"     onclick="setView('focus')">&#127919; Focus</button>
+      <button class="hnav"                      id="hnav-examSetup" onclick="setView('examSetup')">&#127891; Exam</button>
+      <button class="hnav"                      id="hnav-sync"      onclick="setView('sync')">&#9881;&#65039; Acct</button>
+    </nav>
+    <div class="hdr-right">
+      <div class="hdr-sync">
+        <span class="sync-dot dot-wait" id="syncDot"></span>
+        <span class="sync-lbl" id="syncTxt">&#8230;</span>
+      </div>
+      <button class="try-btn" id="tryBtn" onclick="toggleTryMenu()">Try 1</button>
+      <button class="btn btn-pri" style="font-size:10px;padding:3px 6px" onclick="newTry()">+Try</button>
     </div>
-    <button class="try-btn" id="tryBtn" onclick="toggleTryMenu()">Try 1</button>
-    <button class="btn btn-pri" style="font-size:11px;padding:4px 9px" onclick="newTry()">+Try</button>
   </div>
 </div>
 
