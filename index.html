@@ -32,20 +32,22 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 
 /* ── HEADER ── */
 .hdr{background:var(--surf);border-bottom:1px solid var(--bdr);padding:0;display:flex;flex-direction:column;position:sticky;top:0;z-index:30;width:100%;overflow:hidden;}
-.hdr-title-row{text-align:center;padding:4px 12px 3px;border-bottom:1px solid var(--bdr);line-height:1.2;}
+/* row 1: logo left, controls right */
+.hdr-top-row{display:flex;align-items:center;justify-content:space-between;padding:4px 8px 3px;border-bottom:1px solid var(--bdr);min-height:30px;gap:6px;}
+.hdr-logo{display:flex;align-items:baseline;gap:0;white-space:nowrap;flex-shrink:0;}
 .hdr-logo-aws{font-weight:800;font-size:11px;color:var(--acc);letter-spacing:.07em;text-transform:uppercase;}
 .hdr-logo-sub{font-weight:400;font-size:10px;color:var(--muted);letter-spacing:.04em;text-transform:uppercase;}
-.hdr-bottom-row{display:flex;align-items:stretch;min-height:38px;overflow:hidden;}
-.hdr-nav{display:flex;align-items:stretch;flex:1;gap:0;overflow:hidden}
-.hnav{display:flex;align-items:center;padding:0 7px;font-size:10.5px;font-weight:700;color:var(--muted);background:transparent;border:none;cursor:pointer;border-bottom:3px solid transparent;white-space:nowrap;gap:3px;transition:color .15s;flex-shrink:1;}
+/* row 2: nav centered */
+.hdr-nav-row{display:flex;justify-content:center;align-items:stretch;min-height:36px;overflow:hidden;border-bottom:0;}
+.hdr-nav{display:flex;align-items:stretch;gap:0;overflow:hidden;justify-content:center;}
+.hnav{display:flex;align-items:center;padding:0 8px;font-size:10.5px;font-weight:700;color:var(--muted);background:transparent;border:none;cursor:pointer;border-bottom:3px solid transparent;white-space:nowrap;gap:3px;transition:color .15s;flex-shrink:1;}
 .hnav:hover:not(.hnav-act){color:var(--text);background:var(--surf2)}
 .hnav.hnav-act{color:var(--acc);border-bottom-color:var(--acc)}
-.hdr-right{display:flex;align-items:center;gap:4px;padding:0 6px;flex-shrink:0;border-left:1px solid var(--bdr)}
+.hdr-right{display:flex;align-items:center;gap:4px;flex-shrink:0;}
 .sync-dot{width:6px;height:6px;border-radius:50%;display:inline-block;flex-shrink:0}
 .dot-ok{background:var(--ok)}.dot-err{background:var(--err)}.dot-wait{background:var(--hint)}
 .hdr-sync{display:flex;align-items:center;gap:3px;font-size:11px;color:var(--muted);white-space:nowrap}
-.sync-lbl{font-size:10px;color:var(--muted);white-space:nowrap;display:none}
-@media(min-width:560px){.sync-lbl{display:inline}}
+.sync-lbl{font-size:10px;color:var(--muted);white-space:nowrap;display:inline}
 .try-btn{font-size:10px;font-weight:600;padding:3px 6px;border-radius:var(--rs);border:1px solid var(--bdr2);background:var(--surf2);color:var(--text);cursor:pointer;white-space:nowrap;}
 .try-btn:hover{background:var(--surf)}
 .try-dropdown{position:absolute;top:64px;left:0;right:0;background:var(--surf);border-bottom:1px solid var(--bdr2);z-index:50;max-height:60vh;overflow-y:auto;display:none;box-shadow:0 4px 12px rgba(0,0,0,.15);}
@@ -64,8 +66,6 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .btn-pri:hover{opacity:.85;background:var(--text)}
 .btn-acc{display:block;width:100%;background:var(--acc);color:#000;border:none;font-weight:700;border-radius:var(--rs);padding:11px 22px;font-size:14px;cursor:pointer}
 .btn-acc:hover{opacity:.9}.btn-acc:disabled{opacity:.4;cursor:default}
-.btn-retry{background:var(--info-bg);color:var(--info-txt);border:1px solid var(--info-txt);font-weight:600;border-radius:var(--rs);padding:7px 14px;cursor:pointer;font-size:13px;width:100%;margin-bottom:8px}
-.btn-retry:hover{opacity:.9}
 .main{max-width:780px;margin:0 auto;padding:14px 12px 80px;width:100%}
 
 /* ── PROGRESS / NAV ── */
@@ -229,17 +229,8 @@ input.jmp{border:1px solid var(--bdr2);border-radius:var(--rs);background:var(--
 </div>
 
 <div class="hdr" id="hdrEl" style="display:none">
-  <div class="hdr-title-row">
-    <span class="hdr-logo-aws">AWS</span><span class="hdr-logo-sub"> AI Practitioner</span>
-  </div>
-  <div class="hdr-bottom-row">
-    <nav class="hdr-nav" id="hdrNav">
-      <button class="hnav" id="hnav-quiz"      onclick="setView('quiz')">&#128221; Study</button>
-      <button class="hnav" id="hnav-stats"     onclick="setView('stats')">&#128202; Stats</button>
-      <button class="hnav" id="hnav-focus"     onclick="setView('focus')">&#127919; Focus</button>
-      <button class="hnav" id="hnav-examSetup" onclick="setView('examSetup')">&#127891; Exam</button>
-      <button class="hnav" id="hnav-sync"      onclick="setView('sync')">&#9881;&#65039; Acct</button>
-    </nav>
+  <div class="hdr-top-row">
+    <span class="hdr-logo"><span class="hdr-logo-aws">AWS</span><span class="hdr-logo-sub">&nbsp;AI Practitioner</span></span>
     <div class="hdr-right">
       <div class="hdr-sync">
         <span class="sync-dot dot-wait" id="syncDot"></span>
@@ -248,6 +239,15 @@ input.jmp{border:1px solid var(--bdr2);border-radius:var(--rs);background:var(--
       <button class="try-btn" id="tryBtn" onclick="toggleTryMenu()">Try 1</button>
       <button class="btn btn-pri" style="font-size:10px;padding:3px 6px" onclick="newTry()">+Try</button>
     </div>
+  </div>
+  <div class="hdr-nav-row">
+    <nav class="hdr-nav" id="hdrNav">
+      <button class="hnav" id="hnav-quiz"      onclick="setView('quiz')">&#128221; Study</button>
+      <button class="hnav" id="hnav-stats"     onclick="setView('stats')">&#128202; Stats</button>
+      <button class="hnav" id="hnav-focus"     onclick="setView('focus')">&#127919; Focus</button>
+      <button class="hnav" id="hnav-examSetup" onclick="setView('examSetup')">&#127891; Exam</button>
+      <button class="hnav" id="hnav-sync"      onclick="setView('sync')">&#9881;&#65039; Acct</button>
+    </nav>
   </div>
 </div>
 
@@ -556,54 +556,16 @@ function submit(){
   if(q.type==='single'||q.type==='multi'){if(!S.sel||(Array.isArray(S.sel)&&!S.sel.length))return;ans=S.sel;}
   else if(q.type==='matching'){if(Object.keys(S.matchSel).length<q.pairs.length)return;ans=JSON.parse(JSON.stringify(S.matchSel));}
   else if(q.type==='ordering'){ans=S.orderItems.slice();}
-  getTD().answers[q.id]=ans;sched();updTryBtn();S.revealed=true;S.loading=true;render();
-  if(S.cache[q.id]){S.expl=S.cache[q.id];S.loading=false;render();return;}
-  fetchX(q);
-}
-function seeExpl(){var q=QS[S.idx];if(S.cache[q.id]){S.expl=S.cache[q.id];render();return;}S.loading=true;render();fetchX(q);}
-
-async function fetchX(q){
-  if(S.explanations&&S.explanations[q.id]){S.expl=S.explanations[q.id];S.cache[q.id]=S.expl;S.loading=false;render();return;}
-  var prompt='';
-  if(q.type==='single'||q.type==='multi'){
-    var ol=Object.entries(q.options).map(function(kv){return kv[0]+'. '+kv[1];}).join('\n');
-    var ok2=Object.keys(q.options).join(', ');
-    prompt='AWS AI Practitioner exam question:\n'+q.stem+'\n'+ol+'\nCorrect: '+q.correct.join(', ')+'\nReturn ONLY compact JSON. Include ALL options ('+ok2+'). Format: {"concept":"AWS concept","A":{"ok":true,"why":"reason"},"B":{"ok":false,"why":"reason"}} \u2014 ok=true means correct.';
-  }else if(q.type==='matching'){
-    var pl=q.pairs.map(function(p,i){return (i+1)+'. '+p.description+' -> '+p.correct;}).join('\n');
-    prompt='AWS matching question:\n'+q.stem+'\nCorrect:\n'+pl+'\nReturn ONLY compact JSON: {"concept":"...","explanations":[{"description":"exact description text","correct":"correct option","why":"reason"}]}\nInclude one entry per pair in the same order as the pairs.';
-  }else if(q.type==='ordering'){
-    var ci=q.items||q.correct||[];
-    var sl=ci.map(function(s,i){return 'Step '+(i+1)+': '+s;}).join('\n');
-    prompt='AWS ordering question:\n'+q.stem+'\nCorrect order:\n'+sl+'\nReturn ONLY compact JSON: {"concept":"...","steps":[{"step":"exact item text","why":"reason"}]}\nList steps in the correct order, one per item.';
-  }
-  try{
-    var r=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json','x-api-key':'YOUR_ANTHROPIC_KEY','anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
-      body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:1200,
-        system:'AWS expert. Return ONLY valid compact JSON. No markdown, no backticks. For matching questions, the "explanations" array must be inside the top-level JSON object, not at the question root.',
-        messages:[{role:'user',content:prompt}]})});
-    var data=await r.json();var txt=(data.content||[]).map(function(c){return c.text||'';}).join('').trim();
-    txt=txt.replace(/```json|```/g,'').trim();
-    var parsed=JSON.parse(txt);
-    // Normalise any AI formatting mistakes before caching
-    S.expl=normaliseExplObj(q,parsed);
-    S.cache[q.id]=S.expl;
-  }catch(e){S.expl={error:true};}
+  getTD().answers[q.id]=ans;sched();updTryBtn();S.revealed=true;
+  var cached=S.cache[q.id]||S.explanations[q.id];
+  if(cached){S.expl=cached;S.cache[q.id]=cached;}else{S.expl=null;}
   S.loading=false;render();
 }
+function seeExpl(){var q=QS[S.idx];var cached=S.cache[q.id]||S.explanations[q.id];if(cached){S.expl=cached;S.cache[q.id]=cached;}S.loading=false;render();}
 
-// Normalise explanation object fetched from AI (same logic as import normaliseExpl)
-function normaliseExplObj(q,expl){
-  if(!expl||typeof expl!=='object')return{error:true};
-  if(expl.error)return expl;
-  // Already has the right fields
-  if(q.type==='ordering'&&expl.steps)return expl;
-  if(q.type==='matching'&&expl.explanations)return expl;
-  if((q.type==='single'||q.type==='multi')&&expl.concept)return expl;
-  // Try to rescue matching: explanations at root
-  if(q.type==='matching'&&Array.isArray(expl.explanations))return expl;
-  if(q.type==='ordering'&&Array.isArray(expl.steps))return expl;
-  return expl;
+async function fetchX(q){
+  // No API call — explanations come from imported JSON only
+  S.loading=false;S.expl=null;render();
 }
 
 // ── Mock exam ─────────────────────────────────────────────────────────────
@@ -784,8 +746,7 @@ function attachDrag(q,isRetry){
 
 function rExpl(q){
   var h='<div class="expl"><div class="xhdr">Explanation</div>';
-  if(S.loading){h+='<div class="swrap"><div class="spin"></div> Generating&#8230;</div>';}
-  else if(!S.expl||S.expl.error){h+='<div style="color:var(--muted);font-size:13px">Unavailable. <button class="btn" onclick="seeExpl()">Retry</button></div>';}
+  if(!S.expl||S.expl.error){h+='<div style="color:var(--muted);font-size:13px">No explanation for this question yet. Upload a JSON file with explanations via the <strong>Acct</strong> tab.</div>';}
   else{h+=renderExplContent(q,S.expl);}
   return h+'</div>';
 }
@@ -869,22 +830,10 @@ function rExamReview(i){
   if(!a)h+='<div class="banner ban-err">&#10007; Not answered</div>';else if(ok)h+='<div class="banner ban-ok">&#10003; Correct!</div>';else{var da=Array.isArray(ua)?ua.join(', '):String(ua||'?');h+='<div class="banner ban-err">&#10007; You chose: <strong>'+esc(da)+'</strong> &middot; Correct: <strong>'+esc(q.correct&&q.correct.join?q.correct.join(', '):String(q.correct||''))+'</strong></div>';}
   var expl=S.explanations[q.id]||S.cache[q.id];
   if(expl&&!expl.error){h+='<div class="expl"><div class="xhdr">&#128161; Explanation</div>'+renderExplContent(q,expl)+'</div>';}
-  else{h+='<div class="expl"><div class="xhdr">&#128161; Explanation</div><div style="font-size:13px;color:var(--muted);display:flex;align-items:center;gap:8px">No cached explanation. <button class="btn" style="font-size:12px" onclick="fetchExamExpl('+i+')">&#9889; Generate</button></div></div>';}
+  else{h+='<div class="expl"><div class="xhdr">&#128161; Explanation</div><div style="font-size:13px;color:var(--muted)">No explanation for this question yet. Upload a JSON file with explanations via the <strong>Acct</strong> tab.</div></div>';}
   slot.innerHTML=h;slot.scrollIntoView({behavior:'smooth',block:'nearest'});
 }
-async function fetchExamExpl(i){
-  var q=S.exam.questions[i];var slot=document.getElementById('examReviewSlot');if(!slot)return;
-  var btn=slot.querySelector('button[onclick="fetchExamExpl('+i+')"]');if(btn){btn.disabled=true;btn.textContent='Generating\u2026';}
-  try{
-    var prompt='';
-    if(q.type==='single'||q.type==='multi'){var ol=Object.entries(q.options).map(function(kv){return kv[0]+'. '+kv[1];}).join('\n');prompt='AWS AI Practitioner:\n'+q.stem+'\n'+ol+'\nCorrect: '+q.correct.join(', ')+'\nReturn ONLY compact JSON: {"concept":"...","A":{"ok":true,"why":"..."},"B":{"ok":false,"why":"..."}}';}
-    else if(q.type==='ordering'){var ci=q.items||q.correct||[];prompt='AWS ordering:\n'+q.stem+'\nCorrect: '+ci.join(' \u2192 ')+'\nReturn ONLY compact JSON: {"concept":"...","steps":[{"step":"exact item text","why":"..."}]}';}
-    else if(q.type==='matching'){prompt='AWS matching:\n'+q.stem+'\nPairs: '+q.pairs.map(function(p){return p.description+' \u2192 '+p.correct;}).join('; ')+'\nReturn ONLY compact JSON: {"concept":"...","explanations":[{"description":"exact description","correct":"option","why":"reason"}]}';}
-    var r=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:1200,messages:[{role:'user',content:prompt}]})});
-    var d=await r.json();var txt=d.content&&d.content[0]&&d.content[0].text;var clean=txt.replace(/```json|```/g,'').trim();var expl=JSON.parse(clean);
-    S.explanations[q.id]=expl;S.cache[q.id]=expl;rExamReview(i);
-  }catch(e){if(btn){btn.disabled=false;btn.textContent='\u26a0 Failed \u2014 retry';}}
-}
+
 
 // ── Stats views ───────────────────────────────────────────────────────────
 function rExamSetup(m){
@@ -906,7 +855,7 @@ function rFocus(m){
   var fl=qs2;if(S.focusFilter==='wrong')fl=qs2.filter(function(x){return x.wr>0;});if(S.focusFilter==='unanswered')fl=qs2.filter(function(x){return x.sk===mt;});if(S.focusSort==='miss')fl=fl.slice().sort(function(a,b){return b.wr-a.wr||b.mr-a.mr||a.qq.id-b.qq.id;});else fl=fl.slice().sort(function(a,b){return a.qq.id-b.qq.id;});
   if(!fl.length){m.innerHTML=h+'<div class="empty">No questions match this filter.</div>';return;}
   var mi=fl.filter(function(x){return x.wr>0;}).map(function(x){return x.qi;});
-  if(mi.length)h+='<button class="btn-retry" onclick="startRetry('+JSON.stringify(mi)+')">&#128260; Practice '+mi.length+' missed question'+(mi.length>1?'s':'')+' (active recall)</button>';
+  if(mi.length)h+='<button class="btn btn-pri" style="width:100%;margin-bottom:10px;padding:9px 14px;font-size:13px" onclick="startRetry('+JSON.stringify(mi)+')">&#128260; Practice '+mi.length+' missed question'+(mi.length>1?'s':'')+' (active recall)</button>';
   h+='<div style="overflow-x:auto"><table class="ftbl"><thead><tr><th>Q#</th><th>Type</th><th>Tries</th><th>Performance</th><th></th></tr></thead><tbody>';
   fl.forEach(function(x){var dots=x.hist.map(function(h2){return '<span class="fdot '+(h2==='o'?'dok2':h2==='e'?'derr2':'dskip')+'">'+(h2==='o'?'&#10003;':h2==='e'?'&#10007;':'&middot;')+'</span>';}).join('');var pct=x.cor+x.wr>0?Math.round(x.cor/(x.cor+x.wr)*100):null;h+='<tr><td><strong>Q'+x.qq.id+'</strong></td><td>'+badge(x.qq.type)+'</td><td>'+dots+'</td><td>'+(x.wr>0?'<span style="color:var(--err-txt);font-weight:700">'+x.wr+'&#10007;</span> <span style="color:var(--muted);font-size:11px">'+pct+'% right</span>':'<span style="color:var(--ok-txt)">'+(x.cor>0?'All correct':'Not tried')+'</span>')+'</td><td><button class="btn" onclick="startRetry(['+x.qi+'])">Retry &#8594;</button></td></tr>';});
   h+='</tbody></table></div>';
@@ -940,14 +889,23 @@ function rSync(m){
     var btnRow=document.createElement('div');btnRow.style.cssText='display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px';var dlBtn=document.createElement('button');dlBtn.className='btn';dlBtn.innerHTML='\u2b07 Download JSON';dlBtn.onclick=exportJSON;var ulBtn=document.createElement('button');ulBtn.className='btn btn-pri';ulBtn.innerHTML='\u2b06 Upload JSON';ulBtn.onclick=triggerImport;btnRow.appendChild(dlBtn);btnRow.appendChild(ulBtn);adminCard.appendChild(btnRow);
     var fileInput=document.createElement('input');fileInput.type='file';fileInput.accept='.json';fileInput.style.display='none';fileInput.id='importFileInput';fileInput.onchange=function(){handleImportFile(this);};adminCard.appendChild(fileInput);
     var importMsg=document.createElement('div');importMsg.id='importMsg';importMsg.style.cssText='font-size:13px;min-height:16px;margin-bottom:12px';adminCard.appendChild(importMsg);
-    var IMPORT_PROMPT='You will receive a JSON object with AWS exam questions. Fill every "explanation": null.\nReturn ONLY valid JSON \u2014 no markdown, no backticks, no text outside the JSON.\nDo NOT add, remove, or rename any keys. Only fill null explanation values.\nProcess 30\u201350 questions per request if the file is large.\n\n\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\nEXPLANATION FORMAT BY QUESTION TYPE\n\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\n\nTYPE "single" or "multi"\n\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\n"explanation": {\n  "concept": "Key AWS concept",\n  "A": { "ok": true,  "why": "Why A is correct (1\u20132 sentences)." },\n  "B": { "ok": false, "why": "Why B is wrong (1\u20132 sentences)." },\n  "C": { "ok": false, "why": "..." },\n  "D": { "ok": false, "why": "..." }\n}\n\u2022 Include ALL option letters (A, B, C, D, E...). "ok": true = correct.\n\nTYPE "ordering"\n\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\n"explanation": {\n  "concept": "Key AWS concept",\n  "steps": [\n    { "step": "exact text of item 1", "why": "why this is first" },\n    { "step": "exact text of item 2", "why": "why this is second" }\n  ]\n}\n\u26a0 Steps MUST be inside "explanation". Do NOT put them at the question root.\n\nTYPE "matching"\n\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\n"explanation": {\n  "concept": "Key AWS concept",\n  "explanations": [\n    { "description": "exact text from pairs[0].description", "correct": "option", "why": "reason" },\n    { "description": "exact text from pairs[1].description", "correct": "option", "why": "reason" }\n  ]\n}\n\u26a0 "explanations" array MUST be inside "explanation". Do NOT put it at the question root.\n\nCOMMON MISTAKES:\n\u2717 { "id":114, "steps":[...], "explanation": null }  \u2190 steps at root\n\u2713 { "id":114, "explanation": { "concept":"...", "steps":[...] } }\n\n\u2717 { "description": "description": "Some text" }  \u2190 duplicate key (JSON error!)\n\u2713 { "description": "Some text" }';
+    var IMPORT_PROMPT='You will receive a JSON array of AWS exam questions. Your job is to fill every "explanation": null.\nReturn ONLY valid JSON \u2014 no markdown, no backticks, no text outside the JSON.\nDo NOT add, remove, or rename any keys. Only fill null explanation values.\nYou may process the whole file or any subset \u2014 even a single question is fine.\n\n\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\nEXPLANATION FORMAT BY TYPE (with full real examples)\n\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\n\n\u2500 TYPE "single" (one correct answer) \u2500\n"explanation": {\n  "concept": "Amazon SageMaker is the primary AWS service for building, training, and deploying ML models.",\n  "A": { "ok": true,  "why": "SageMaker provides a fully managed environment for the entire ML workflow, including built-in algorithms, notebook instances, and one-click deployment." },\n  "B": { "ok": false, "why": "AWS Lambda is a serverless compute service for running code, not for training ML models." },\n  "C": { "ok": false, "why": "Amazon S3 is object storage; it can store training data but does not train models." },\n  "D": { "ok": false, "why": "Amazon EC2 provides raw compute instances; while you could install ML tools, it is not a managed ML platform." }\n}\n\u2022 Include ALL option letters present in the question (A, B, C, D, E\u2026). "ok": true = correct answer.\n\n\u2500 TYPE "multi" (multiple correct answers) \u2500\nSame structure as "single" but multiple keys have "ok": true.\n"explanation": {\n  "concept": "Amazon Rekognition provides image and video analysis capabilities including object detection and facial recognition.",\n  "A": { "ok": true,  "why": "Rekognition can detect objects and scenes in images, returning labels with confidence scores." },\n  "B": { "ok": true,  "why": "Facial analysis is a core Rekognition feature, supporting age estimation, emotion detection, and face comparison." },\n  "C": { "ok": false, "why": "Natural language processing is handled by Comprehend, not Rekognition." },\n  "D": { "ok": false, "why": "Time-series forecasting is the purpose of Amazon Forecast, not an image/video service." },\n  "E": { "ok": false, "why": "Speech-to-text transcription belongs to Amazon Transcribe." }\n}\n\n\u2500 TYPE "ordering" (drag items into correct sequence) \u2500\n"explanation": {\n  "concept": "Training an ML model in SageMaker follows a defined pipeline from data preparation to deployment.",\n  "steps": [\n    { "step": "Collect and label training data", "why": "High-quality labeled data is the foundation of any supervised ML model; without it the model cannot learn." },\n    { "step": "Choose a SageMaker built-in algorithm or custom script", "why": "The algorithm determines how the model learns from the data; it must be selected before training begins." },\n    { "step": "Launch a SageMaker training job", "why": "SageMaker provisions managed compute, runs the training script, and saves the model artifact to S3." },\n    { "step": "Evaluate model metrics in SageMaker Experiments", "why": "Reviewing accuracy, precision, and recall before deployment prevents shipping an underperforming model." },\n    { "step": "Deploy the model to a SageMaker endpoint", "why": "An endpoint exposes the model as a REST API so applications can send inference requests in real time." }\n  ]\n}\n\u26a0 "steps" MUST be inside "explanation". Do NOT put them at the question root.\n\u26a0 Each "step" value must match the exact text of the corresponding item in the question.\n\n\u2500 TYPE "matching" (match descriptions to options) \u2500\n"explanation": {\n  "concept": "AWS AI services are purpose-built managed services, each targeting a specific AI/ML use case.",\n  "explanations": [\n    { "description": "Converts spoken audio into text", "correct": "Amazon Transcribe", "why": "Transcribe uses automatic speech recognition (ASR) to produce text transcripts from audio files or live streams." },\n    { "description": "Extracts key phrases and sentiment from text", "correct": "Amazon Comprehend", "why": "Comprehend applies NLP to identify entities, sentiment, language, and key phrases without custom ML code." },\n    { "description": "Generates human-like text and answers questions", "correct": "Amazon Bedrock", "why": "Bedrock provides access to foundation models (FMs) from leading AI companies via a single managed API." },\n    { "description": "Identifies objects and people in images", "correct": "Amazon Rekognition", "why": "Rekognition uses deep learning to detect labels, faces, text, and inappropriate content in images and video." }\n  ]\n}\n\u26a0 "explanations" array MUST be inside "explanation". Do NOT put it at the question root.\n\u26a0 Each "description" must match the exact text from the question\'s pairs array.\n\n\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\n COMMON MISTAKES\n\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\n\u2717 { "id":114, "steps":[...], "explanation": null }    \u2190 steps/explanations at root\n\u2713 { "id":114, "explanation": { "concept":"...", "steps":[...] } }\n\n\u2717 { "description": "description": "Some text" }    \u2190 duplicate key (JSON error)\n\u2713 { "description": "Some text" }\n\nFor large files: process 30\u201350 questions per request and upload each batch separately.';
+
     var fmtToggle=document.createElement('button');fmtToggle.className='link-btn';fmtToggle.style.fontSize='12px';fmtToggle.textContent='Show AI prompt & format guide \u25be';fmtToggle.onclick=function(){var ref=document.getElementById('jsonFmtRef');var open=ref.style.display!=='none';ref.style.display=open?'none':'block';fmtToggle.textContent=open?'Show AI prompt & format guide \u25be':'Hide AI prompt & format guide \u25b4';};adminCard.appendChild(fmtToggle);
     var fmtRef=document.createElement('div');fmtRef.id='jsonFmtRef';fmtRef.style.display='none';fmtRef.style.marginTop='10px';
     var promptBox=document.createElement('div');promptBox.style.cssText='background:var(--info-bg);border:1.5px solid var(--info-txt);border-radius:var(--rs);padding:12px 14px;margin-bottom:10px';
     var promptHdr=document.createElement('div');promptHdr.style.cssText='display:flex;align-items:center;gap:8px;margin-bottom:8px;flex-wrap:wrap';promptHdr.innerHTML='<strong style="font-size:13px;color:var(--info-txt);flex:1">&#128203; Copy this prompt into Claude, ChatGPT, or Gemini, then paste your JSON</strong>';
     var cpBtn=document.createElement('button');cpBtn.className='btn btn-pri';cpBtn.style.fontSize='11px';cpBtn.textContent='Copy prompt';cpBtn.onclick=function(){navigator.clipboard.writeText(IMPORT_PROMPT).then(function(){cpBtn.textContent='Copied \u2713';setTimeout(function(){cpBtn.textContent='Copy prompt';},2500);}).catch(function(){cpBtn.textContent='Failed \u2014 select manually';});};promptHdr.appendChild(cpBtn);promptBox.appendChild(promptHdr);
     var promptPre=document.createElement('pre');promptPre.style.cssText='font-size:11px;line-height:1.65;white-space:pre-wrap;word-break:break-word;color:var(--text);max-height:320px;overflow-y:auto;cursor:text';promptPre.textContent=IMPORT_PROMPT;promptBox.appendChild(promptPre);fmtRef.appendChild(promptBox);
-    var fmtNote=document.createElement('div');fmtNote.style.cssText='font-size:12px;color:var(--muted);line-height:1.7;padding:10px 12px;background:var(--surf2);border-radius:var(--rs);border:1px solid var(--bdr)';fmtNote.innerHTML='<strong>Import accepts:</strong><br>1. Explanation-only: <code style="font-size:11px;background:var(--bdr);padding:1px 4px;border-radius:3px">[{"id":1, "explanation":{...}}, ...]</code><br>2. Full question: <code style="font-size:11px;background:var(--bdr);padding:1px 4px;border-radius:3px">{"id":400,"type":"single","stem":"...","options":{...},"correct":["A"],"explanation":{...}}</code><br>Top-level can be <code style="font-size:11px;background:var(--bdr);padding:1px 4px;border-radius:3px">[]</code> or <code style="font-size:11px;background:var(--bdr);padding:1px 4px;border-radius:3px">{"questions":[]}</code>.<br><strong style="color:var(--warn-txt)">\u26a0 File fails to parse?</strong> Check it at <a href="https://jsonlint.com" target="_blank" style="color:var(--acc)">jsonlint.com</a> \u2014 look for duplicate keys like <code style="font-size:11px">"description": "description": "..."</code>';fmtRef.appendChild(fmtNote);adminCard.appendChild(fmtRef);
+    var fmtNote=document.createElement('div');fmtNote.style.cssText='font-size:12px;color:var(--muted);line-height:1.8;padding:10px 12px;background:var(--surf2);border-radius:var(--rs);border:1px solid var(--bdr)';fmtNote.innerHTML='<strong>What you can upload:</strong><br>'
+      +'<strong style="color:var(--text)">1. Explanation-only</strong> (AI returns just the explanation fields):<br>'
+      +'&nbsp;&nbsp;<code style="font-size:11px;background:var(--bdr);padding:1px 4px;border-radius:3px">[{"id":5, "explanation":{...}}, {"id":12, "explanation":{...}}]</code><br>'
+      +'<strong style="color:var(--text)">2. Full question</strong> (new question + explanation together):<br>'
+      +'&nbsp;&nbsp;<code style="font-size:11px;background:var(--bdr);padding:1px 4px;border-radius:3px">{"id":400,"type":"single","stem":"...","options":{...},"correct":["A"],"explanation":{...}}</code><br>'
+      +'<strong style="color:var(--text)">3. Mix of both</strong> in the same file \u2014 the importer handles each entry independently.<br>'
+      +'<strong style="color:var(--text)">4. Even a single question</strong> \u2014 wrap it in an array: <code style="font-size:11px;background:var(--bdr);padding:1px 4px;border-radius:3px">[{...}]</code><br>'
+      +'Top-level can be <code style="font-size:11px;background:var(--bdr);padding:1px 4px;border-radius:3px">[]</code> or <code style="font-size:11px;background:var(--bdr);padding:1px 4px;border-radius:3px">{"questions":[]}</code>.<br>'
+      +'<strong style="color:var(--warn-txt)">\u26a0 File fails to parse?</strong> Check it at <a href="https://jsonlint.com" target="_blank" style="color:var(--acc)">jsonlint.com</a> \u2014 look for duplicate keys like <code style="font-size:11px">"description": "description": "..."</code>';fmtRef.appendChild(fmtNote);adminCard.appendChild(fmtRef);
   }
   root.appendChild(adminCard);
   var h2c=document.createElement('div');h2c.className='h2';h2c.style.marginTop='14px';h2c.textContent='\ud83d\udca1 Study Tips';root.appendChild(h2c);
