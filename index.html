@@ -199,6 +199,11 @@ input.jmp{border:1px solid var(--bdr2);border-radius:var(--rs);background:var(--
 .bulk-existing-btn{padding:2px 9px;border-radius:99px;font-size:11px;font-weight:600;border:1.5px solid var(--bdr2);background:var(--surf2);color:var(--text);cursor:pointer}
 .bulk-existing-btn:hover{border-color:var(--acc);color:var(--acc)}
 .ftbl-cb{width:16px;height:16px;cursor:pointer;accent-color:var(--acc)}
+.pwd-form{display:none;margin-top:10px;padding-top:10px;border-top:1px solid var(--bdr)}
+.pwd-form.open{display:block}
+.pwd-input{width:100%;border:1px solid var(--bdr2);border-radius:var(--rs);background:var(--surf2);color:var(--text);padding:8px 10px;font-size:14px;font-family:inherit;margin-bottom:8px}
+.forgot-area{display:none;margin-top:10px;padding:12px;background:var(--surf2);border-radius:var(--rs);border:1px solid var(--bdr)}
+.forgot-area.open{display:block}
 .aq-type-btn{padding:6px 14px;border-radius:var(--rs);border:1.5px solid var(--bdr2);background:var(--surf2);color:var(--muted);font-size:13px;font-weight:600;cursor:pointer}
 .aq-type-btn.active{border-color:var(--acc);background:var(--acc);color:#000}
 .aq-option-row{display:flex;align-items:center;gap:6px;margin-bottom:6px}
@@ -223,6 +228,15 @@ input.jmp{border:1px solid var(--bdr2);border-radius:var(--rs);background:var(--
     </div>
     <div style="text-align:center;margin-top:8px">
       <button class="link-btn" style="color:var(--muted);font-size:12px" onclick="continueAsGuest()">Continue as guest (no progress saved)</button>
+    </div>
+    <div style="text-align:center;margin-top:6px">
+      <button class="link-btn" style="color:var(--muted);font-size:11px" onclick="showForgotPwd()">Forgot password?</button>
+    </div>
+    <div class="forgot-area" id="forgotArea">
+      <p style="font-size:12px;color:var(--muted);margin-bottom:8px;line-height:1.5">Enter your <strong>recovery email</strong> (if you linked one in the Account tab) or your <strong>username</strong>. A reset link will be sent if a matching account is found.</p>
+      <input class="minput" id="forgotInput" type="text" placeholder="your@email.com or username" style="margin-bottom:8px">
+      <button class="btn-acc" id="forgotBtn" onclick="doForgotPwd()">Send Reset Link &#8594;</button>
+      <div class="errbox" id="forgotMsg" style="margin-top:8px"></div>
     </div>
     <div class="errbox" id="authErr"></div>
   </div>
@@ -874,6 +888,29 @@ function rSync(m){
   if(IS_GUEST){var gc=document.createElement('div');gc.className='try-sec';gc.innerHTML='<div style="text-align:center;padding:20px 10px"><div style="font-size:40px;margin-bottom:12px">&#128274;</div><div style="font-size:16px;font-weight:700;margin-bottom:8px">Create a free account</div><p style="font-size:13px;color:var(--muted);line-height:1.7;margin-bottom:18px">Sign up to save your progress, track right/wrong across multiple tries, and sync across devices.</p><button class="btn-acc" onclick="IS_GUEST=false;document.getElementById(\'hdrEl\').style.display=\'none\';document.getElementById(\'authOverlay\').style.display=\'\';">Create Account &#8594;</button></div>';root.appendChild(gc);m.innerHTML='';m.appendChild(root);return;}
   var filled=QS.filter(function(q){return S.explanations[q.id];}).length;
   var accCard=document.createElement('div');accCard.className='try-sec';accCard.innerHTML='<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap"><div style="font-size:28px">&#128100;</div><div><div style="font-size:15px;font-weight:700">'+esc(USERNAME)+'</div><div style="font-size:12px;color:var(--muted)">Signed in</div></div><button class="btn" style="margin-left:auto;font-size:12px" onclick="signOut()">Sign out</button></div>';root.appendChild(accCard);
+  var pwdCard=document.createElement('div');pwdCard.className='try-sec';
+  pwdCard.innerHTML='<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">'
+    +'<div><div style="font-size:14px;font-weight:700">&#128274; Change Password</div>'
+    +'<div style="font-size:12px;color:var(--muted);margin-top:2px">Update your login password anytime</div></div>'
+    +'<button class="btn" onclick="showChangePwd()">Change &hellip;</button></div>'
+    +'<div class="pwd-form" id="changePwdForm">'
+    +'<input class="pwd-input" id="changePwdNew" type="password" placeholder="New password (min 6 chars)" autocomplete="new-password">'
+    +'<input class="pwd-input" id="changePwdConfirm" type="password" placeholder="Confirm new password" autocomplete="new-password">'
+    +'<button class="btn btn-pri" id="changePwdBtn" onclick="doChangePwd()">Update Password</button>'
+    +'<div id="changePwdMsg" style="font-size:12px;margin-top:6px;line-height:1.4"></div></div>';
+  root.appendChild(pwdCard);
+  var storedRE=localStorage.getItem('quiz_real_email_'+USERNAME)||'';
+  var reCard=document.createElement('div');reCard.className='try-sec';
+  reCard.innerHTML='<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">'
+    +'<div><div style="font-size:14px;font-weight:700">&#128140; Recovery Email</div>'
+    +'<div style="font-size:12px;color:var(--muted);margin-top:2px">'+(storedRE?'Linked: <strong>'+esc(storedRE)+'</strong>':'Not linked &mdash; add one to enable self-service password reset')+'</div></div>'
+    +'<button class="btn" onclick="showLinkEmail()">'+(storedRE?'Update &hellip;':'Link &hellip;')+'</button></div>'
+    +'<div class="pwd-form" id="linkEmailForm">'
+    +'<p style="font-size:12px;color:var(--muted);margin-bottom:8px;line-height:1.5">A real email lets you reset your password without admin help. You\'ll receive a confirmation link &mdash; click it to activate.</p>'
+    +'<input class="pwd-input" id="linkEmailInput" type="email" placeholder="your@email.com" autocomplete="email">'
+    +'<button class="btn btn-pri" id="linkEmailBtn" onclick="doLinkEmail()">Link Email</button>'
+    +'<div id="linkEmailMsg" style="font-size:12px;margin-top:6px;line-height:1.4"></div></div>';
+  root.appendChild(reCard);
   if(S.categoryList&&S.categoryList.length){var h2cat=document.createElement('div');h2cat.className='h2';h2cat.style.marginTop='14px';h2cat.innerHTML='&#127991; Categories';root.appendChild(h2cat);var catCard=document.createElement('div');catCard.className='try-sec';var catGrid=document.createElement('div');catGrid.style.cssText='display:flex;flex-direction:column;gap:8px';S.categoryList.forEach(function(cat){var count=QS.filter(function(q){return hasCat(q.id,cat);}).length;var row=document.createElement('div');row.style.cssText='display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--surf2);border-radius:var(--rs);border:1px solid var(--bdr)';var nameSpan=document.createElement('span');nameSpan.style.cssText='flex:1;font-size:14px;font-weight:600';nameSpan.textContent=cat;var countSpan=document.createElement('span');countSpan.style.cssText='font-size:12px;color:var(--muted)';countSpan.textContent=count+' question'+(count!==1?'s':'');var studyBtn=document.createElement('button');studyBtn.className='btn btn-pri';studyBtn.style.fontSize='12px';studyBtn.innerHTML='&#128218; Study';studyBtn.onclick=(function(c){return function(){S.activeCat=c;var first=getFilteredQS()[0];if(first)S.idx=QS.findIndex(function(qq){return qq.id===first.id;});rst();setView('quiz');};})(cat);row.appendChild(nameSpan);row.appendChild(countSpan);row.appendChild(studyBtn);if(S.adminMode){var delBtn=document.createElement('button');delBtn.className='btn';delBtn.style.cssText='color:var(--err-txt);border-color:var(--err);font-size:12px';delBtn.innerHTML='&#128465;';delBtn.onclick=(function(c){return function(){if(confirm('Delete category "'+c+'"?'))deleteCat(c);};})(cat);row.appendChild(delBtn);}catGrid.appendChild(row);});catCard.appendChild(catGrid);root.appendChild(catCard);}
   var adminH2=document.createElement('div');adminH2.className='h2';adminH2.style.marginTop='14px';adminH2.innerHTML='&#128272; Admin';root.appendChild(adminH2);
   var adminCard=document.createElement('div');adminCard.className='try-sec';
@@ -1005,9 +1042,117 @@ function saveEdit(qid){
   saveContent().then(function(ok){msg.textContent=ok?'\u2713 Saved!':'\u26a0 Local only';msg.style.color=ok?'var(--ok-txt)':'var(--warn-txt)';render();});
 }
 
+// ── Password Management ───────────────────────────────────────────────────
+async function doRecoveryPwd(){
+  var p1=document.getElementById('recPwd1').value;
+  var p2=document.getElementById('recPwd2').value;
+  var msg=document.getElementById('recPwdMsg');
+  msg.textContent='';
+  if(p1.length<6){msg.style.color='var(--err-txt)';msg.textContent='Password must be at least 6 characters.';return;}
+  if(p1!==p2){msg.style.color='var(--err-txt)';msg.textContent='Passwords do not match.';return;}
+  var btn=document.getElementById('recPwdBtn');btn.disabled=true;btn.textContent='Saving\u2026';
+  try{
+    var r=await SB.auth.updateUser({password:p1});
+    if(r.error)throw r.error;
+    msg.style.color='var(--ok-txt)';msg.textContent='\u2713 Password updated! Redirecting\u2026';
+    setTimeout(function(){window.location.href=window.location.href.split('#')[0];},1500);
+  }catch(e){
+    msg.style.color='var(--err-txt)';msg.textContent=e.message||'Failed to update password.';
+    btn.disabled=false;btn.textContent='Set Password';
+  }
+}
+function showChangePwd(){
+  var f=document.getElementById('changePwdForm');
+  if(f){f.classList.toggle('open');if(f.classList.contains('open')){var i=document.getElementById('changePwdNew');if(i)i.focus();}}
+}
+async function doChangePwd(){
+  var p1=document.getElementById('changePwdNew').value;
+  var p2=document.getElementById('changePwdConfirm').value;
+  var msg=document.getElementById('changePwdMsg');
+  msg.textContent='';
+  if(p1.length<6){msg.style.color='var(--err-txt)';msg.textContent='Password must be at least 6 characters.';return;}
+  if(p1!==p2){msg.style.color='var(--err-txt)';msg.textContent='Passwords do not match.';return;}
+  var btn=document.getElementById('changePwdBtn');btn.disabled=true;btn.textContent='Saving\u2026';
+  try{
+    var r=await SB.auth.updateUser({password:p1});
+    if(r.error)throw r.error;
+    msg.style.color='var(--ok-txt)';msg.textContent='\u2713 Password updated successfully!';
+    document.getElementById('changePwdNew').value='';
+    document.getElementById('changePwdConfirm').value='';
+    btn.disabled=false;btn.textContent='Update Password';
+  }catch(e){
+    msg.style.color='var(--err-txt)';msg.textContent=e.message||'Update failed.';
+    btn.disabled=false;btn.textContent='Update Password';
+  }
+}
+function showLinkEmail(){
+  var f=document.getElementById('linkEmailForm');
+  if(f){f.classList.toggle('open');if(f.classList.contains('open')){var i=document.getElementById('linkEmailInput');if(i)i.focus();}}
+}
+async function doLinkEmail(){
+  var email=document.getElementById('linkEmailInput').value.trim();
+  var msg=document.getElementById('linkEmailMsg');
+  msg.textContent='';
+  if(!email||!email.includes('@')){msg.style.color='var(--err-txt)';msg.textContent='Enter a valid email address.';return;}
+  var btn=document.getElementById('linkEmailBtn');btn.disabled=true;btn.textContent='Sending\u2026';
+  try{
+    var r=await SB.auth.updateUser({email:email});
+    if(r.error)throw r.error;
+    localStorage.setItem('quiz_real_email_'+USERNAME,email);
+    msg.style.color='var(--ok-txt)';msg.textContent='\u2713 Confirmation sent to '+email+'! Click the link in that email to confirm. After confirming, this address can be used to reset your password if you get locked out.';
+    btn.disabled=false;btn.textContent='Link Email';
+  }catch(e){
+    msg.style.color='var(--err-txt)';msg.textContent=e.message||'Failed to link email.';
+    btn.disabled=false;btn.textContent='Link Email';
+  }
+}
+function showForgotPwd(){
+  var f=document.getElementById('forgotArea');
+  if(f)f.classList.toggle('open');
+}
+async function doForgotPwd(){
+  var val=document.getElementById('forgotInput').value.trim();
+  var msg=document.getElementById('forgotMsg');
+  msg.textContent='';
+  if(!val){msg.style.color='var(--err-txt)';msg.textContent='Enter your email or username.';return;}
+  var email=val;
+  if(!val.includes('@')){
+    var stored=localStorage.getItem('quiz_real_email_'+val.toLowerCase());
+    if(stored){email=stored;}
+    else{email=val.toLowerCase().replace(/[^a-z0-9_-]/g,'_')+'@awsquiz.app';}
+  }
+  var btn=document.getElementById('forgotBtn');btn.disabled=true;btn.textContent='Sending\u2026';
+  try{
+    var r=await SB.auth.resetPasswordForEmail(email,{redirectTo:window.location.href.split('#')[0]});
+    if(r.error)throw r.error;
+    msg.style.color='var(--ok-txt)';msg.textContent='If that address is registered, a reset link has been sent. Check your inbox (and spam folder).';
+    btn.disabled=false;btn.textContent='Send Reset Link';
+  }catch(e){
+    msg.style.color='var(--err-txt)';msg.textContent=e.message||'Failed to send reset link.';
+    btn.disabled=false;btn.textContent='Send Reset Link';
+  }
+}
+
 // ── Boot ──────────────────────────────────────────────────────────────────
 (async function boot(){
   SB=supabase.createClient(SB_URL,SB_KEY);
+  SB.auth.onAuthStateChange(async function(event,session){
+    if(event==='PASSWORD_RECOVERY'){
+      document.getElementById('authOverlay').style.display='none';
+      var existing=document.getElementById('pwdRecoveryOverlay');
+      if(existing)return;
+      var ov=document.createElement('div');ov.className='overlay';ov.id='pwdRecoveryOverlay';
+      ov.innerHTML='<div class="modal"><h2>&#128274; Set New Password</h2>'
+        +'<p class="minfo">Your reset link is valid. Choose a new password below.</p>'
+        +'<label class="mlabel">New Password</label>'
+        +'<input class="minput" id="recPwd1" type="password" placeholder="at least 6 characters" autocomplete="new-password">'
+        +'<label class="mlabel">Confirm Password</label>'
+        +'<input class="minput" id="recPwd2" type="password" placeholder="repeat password" autocomplete="new-password">'
+        +'<button class="btn-acc" id="recPwdBtn" onclick="doRecoveryPwd()">Set Password →</button>'
+        +'<div class="errbox" id="recPwdMsg" style="margin-top:8px"></div></div>';
+      document.body.appendChild(ov);
+    }
+  });
   try{
     var sr=await SB.auth.getSession();
     if(sr.data&&sr.data.session&&sr.data.session.user){
