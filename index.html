@@ -906,7 +906,7 @@ function rSync(m){
     +'<div style="font-size:12px;color:var(--muted);margin-top:2px">'+(storedRE?'Linked: <strong>'+esc(storedRE)+'</strong>':'Not linked &mdash; add one to enable self-service password reset')+'</div></div>'
     +'<button class="btn" onclick="showLinkEmail()">'+(storedRE?'Update &hellip;':'Link &hellip;')+'</button></div>'
     +'<div class="pwd-form" id="linkEmailForm">'
-    +'<p style="font-size:12px;color:var(--muted);margin-bottom:8px;line-height:1.5">A real email lets you reset your password without admin help. You\'ll receive a confirmation link &mdash; click it to activate.</p>'
+    +'<p style="font-size:12px;color:var(--muted);margin-bottom:8px;line-height:1.5">Saves a contact email so the admin can verify your identity if you forget your password. No confirmation email needed.</p>'
     +'<input class="pwd-input" id="linkEmailInput" type="email" placeholder="your@email.com" autocomplete="email">'
     +'<button class="btn btn-pri" id="linkEmailBtn" onclick="doLinkEmail()">Link Email</button>'
     +'<div id="linkEmailMsg" style="font-size:12px;margin-top:6px;line-height:1.4"></div></div>';
@@ -1096,10 +1096,10 @@ async function doLinkEmail(){
   if(!email||!email.includes('@')){msg.style.color='var(--err-txt)';msg.textContent='Enter a valid email address.';return;}
   var btn=document.getElementById('linkEmailBtn');btn.disabled=true;btn.textContent='Sending\u2026';
   try{
-    var r=await SB.auth.updateUser({email:email});
+    var r=await SB.auth.updateUser({data:{recovery_email:email}});
     if(r.error)throw r.error;
     localStorage.setItem('quiz_real_email_'+USERNAME,email);
-    msg.style.color='var(--ok-txt)';msg.textContent='\u2713 Confirmation sent to '+email+'! Click the link in that email to confirm. After confirming, this address can be used to reset your password if you get locked out.';
+    msg.style.color='var(--ok-txt)';msg.textContent='\u2713 Recovery email saved! If you forget your password, contact the admin and share this email (\u201c'+email+'\u201d) to confirm your identity.';
     btn.disabled=false;btn.textContent='Link Email';
   }catch(e){
     msg.style.color='var(--err-txt)';msg.textContent=e.message||'Failed to link email.';
