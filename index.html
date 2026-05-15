@@ -204,6 +204,18 @@ input.jmp{border:1px solid var(--bdr2);border-radius:var(--rs);background:var(--
 .pwd-input{width:100%;border:1px solid var(--bdr2);border-radius:var(--rs);background:var(--surf2);color:var(--text);padding:8px 10px;font-size:14px;font-family:inherit;margin-bottom:8px}
 .forgot-area{display:none;margin-top:10px;padding:12px;background:var(--surf2);border-radius:var(--rs);border:1px solid var(--bdr)}
 .forgot-area.open{display:block}
+.exam-dropdown{position:absolute;top:28px;left:0;background:var(--surf);border:1px solid var(--bdr2);border-radius:0 var(--r) var(--r) var(--r);z-index:60;min-width:230px;box-shadow:0 6px 18px rgba(0,0,0,.22);display:none}
+.exam-dropdown.open{display:block}
+.edd-item{padding:10px 14px;cursor:pointer;font-size:13px;border-bottom:1px solid var(--bdr);display:flex;align-items:center;gap:8px}
+.edd-item:hover{background:var(--surf2)}
+.edd-item.edd-act{color:var(--acc);font-weight:700}
+.edd-add{padding:9px 14px;font-size:12px;color:var(--acc);cursor:pointer;font-weight:700;border-top:2px solid var(--bdr2)}
+.edd-add:hover{background:var(--acc-bg)}
+.cef{width:100%;border:1px solid var(--bdr2);border-radius:var(--rs);background:var(--surf2);color:var(--text);padding:8px 10px;font-size:14px;font-family:inherit;margin-bottom:8px}
+.cef-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px}
+.cef-row .cef{margin-bottom:0}
+.ssb{padding:6px 12px;border-radius:var(--rs);border:1.5px solid var(--bdr2);background:var(--surf2);color:var(--muted);font-size:12px;font-weight:600;cursor:pointer}
+.ssb.ssb-on{border-color:var(--acc);background:var(--acc);color:#000}
 .aq-type-btn{padding:6px 14px;border-radius:var(--rs);border:1.5px solid var(--bdr2);background:var(--surf2);color:var(--muted);font-size:13px;font-weight:600;cursor:pointer}
 .aq-type-btn.active{border-color:var(--acc);background:var(--acc);color:#000}
 .aq-option-row{display:flex;align-items:center;gap:6px;margin-bottom:6px}
@@ -244,7 +256,7 @@ input.jmp{border:1px solid var(--bdr2);border-radius:var(--rs);background:var(--
 
 <div class="hdr" id="hdrEl" style="display:none">
   <div class="hdr-top-row">
-    <span class="hdr-logo"><span class="hdr-logo-aws">AWS</span><span class="hdr-logo-sub">&nbsp;AI Practitioner</span></span>
+    <div style="position:relative"><span class="hdr-logo" id="hdrLogoEl" onclick="toggleExamSwitcher()"><span class="hdr-logo-aws" id="hdrProvTxt">AWS</span><span class="hdr-logo-sub" id="hdrNameTxt">&nbsp;AI Practitioner</span><span id="hdrSwArr" style="display:none;font-size:9px;color:var(--muted);margin-left:3px;vertical-align:middle">&#9660;</span></span><div class="exam-dropdown" id="examDropdown"></div></div>
     <div class="hdr-right">
       <div class="hdr-sync">
         <span class="sync-dot dot-wait" id="syncDot"></span>
@@ -276,6 +288,7 @@ var _SEED_QS=JSON.parse(document.getElementById('qdata').textContent);
 var SB_URL='https://xhdwuacoilfigeqfmivx.supabase.co';
 var SB_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhoZHd1YWNvaWxmaWdlcWZtaXZ4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY1NDM5MjAsImV4cCI6MjA5MjExOTkyMH0.P7RI2PqXTgHBlYvHL4XonSNt72CAQr0kpEWGRcd_BcI';
 var SB=null,USERID=null,USERNAME=null,saveTimer=null,AUTH_MODE='signin',IS_GUEST=false;
+var examDefs=[],ACTIVE_EXAM=null,progressData={};
 var examInterval=null;
 
 document.addEventListener('click',function(e){
@@ -332,18 +345,12 @@ function continueAsGuest(){
   QS=_SEED_QS.slice();
   (async function(){
     try{
-      var rc=await SB.from('quiz_content').select('key,data').in('key',['questions','explanations','corrections','categories']);
-      if(!rc.error&&rc.data){
-        var qRow=rc.data.find(function(r){return r.key==='questions';});
-        if(qRow&&qRow.data&&qRow.data.length)QS=qRow.data.map(repairQuestion);
-        QS.sort(function(a,b){return a.id-b.id;});
-        rc.data.forEach(function(row){
-          if(row.key==='explanations'){Object.keys(row.data||{}).forEach(function(k){var id=parseInt(k);S.explanations[id]=row.data[k];S.cache[id]=row.data[k];});}
-          if(row.key==='corrections'){S.corrections=row.data||{};}
-          if(row.key==='categories'){S.categories=row.data.categories||{};S.categoryList=row.data.categoryList||[];}
-        });
-      }
-    }catch(e){console.warn('guest content load:',e);}
+      var edR=await SB.from('quiz_content').select('key,data').eq('key','exam_defs');
+      if(!edR.error&&edR.data&&edR.data[0])examDefs=edR.data[0].data||[];
+      if(!examDefs.length)examDefs=[{id:'default',provider:'AWS',name:'AI PRACTITIONER',totalQ:65,timeMins:90,passScore:700,scoreSystem:'aws',drawMode:'proportional'}];
+      ACTIVE_EXAM=examDefs[0];updateLogoEl();
+      await loadExamContent(ACTIVE_EXAM.id);
+    }catch(e){console.warn('guest load:',e);if(!ACTIVE_EXAM)ACTIVE_EXAM={id:'default',provider:'AWS',name:'AI PRACTITIONER',totalQ:65,timeMins:90,passScore:700,scoreSystem:'aws',drawMode:'proportional'};}
     S.loaded=true;S.idx=0;updTryBtn();render();
   })();
 }
@@ -382,7 +389,7 @@ async function doAuth(){
 
 async function signOut(){
   if(examInterval)clearInterval(examInterval);
-  await SB.auth.signOut();USERID=null;USERNAME=null;S=mkS();
+  await SB.auth.signOut();USERID=null;USERNAME=null;S=mkS();examDefs=[];ACTIVE_EXAM=null;progressData={};
   document.getElementById('hdrEl').style.display='none';document.getElementById('authOverlay').style.display='';
   AUTH_MODE='signin';
   document.getElementById('authDesc').textContent='Sign in with your username and password.';
@@ -391,35 +398,65 @@ async function signOut(){
   document.getElementById('authUser').value=localStorage.getItem('quiz_username')||'';document.getElementById('authPwd').value='';
 }
 
-async function startApp(){setSS(false,'loading\u2026');await load();S.loaded=true;var td=getTD();S.idx=0;for(var i=0;i<QS.length;i++){if(!td.answers[QS[i].id]){S.idx=i;break;}}updTryBtn();render();}
+async function startApp(){setSS(false,'loading\u2026');await load();S.loaded=true;if(!ACTIVE_EXAM)ACTIVE_EXAM=examDefs[0];updateLogoEl();var td=getTD();S.idx=0;for(var i=0;i<QS.length;i++){if(!td.answers[QS[i].id]){S.idx=i;break;}}updTryBtn();render();}
 
 async function load(){
+  // ── 1. Exam definitions ──────────────────────────────────────────────────
+  try{
+    var edRes=await SB.from('quiz_content').select('key,data').eq('key','exam_defs');
+    if(!edRes.error&&edRes.data&&edRes.data[0])examDefs=edRes.data[0].data||[];
+  }catch(e){console.warn('examDefs load:',e);}
+  if(!examDefs.length){
+    examDefs=[{id:'default',provider:'AWS',name:'AI PRACTITIONER',totalQ:65,timeMins:90,passScore:700,scoreSystem:'aws',drawMode:'proportional'}];
+    try{await SB.from('quiz_content').upsert([{key:'exam_defs',data:examDefs,updated_at:new Date().toISOString()}]);}catch(e){}
+  }
+  // ── 2. User progress ─────────────────────────────────────────────────────
   try{
     var r=await SB.from('quiz_progress').select('data').eq('user_id',USERID).single();
     if(r.error&&r.error.code!=='PGRST116')throw r.error;
-    if(r.data&&r.data.data){S.tries=r.data.data.tries||[];S.activeTry=r.data.data.activeTry||1;S.exams=r.data.data.exams||[];}
+    if(r.data&&r.data.data){
+      var pd=r.data.data;
+      // Migrate old format (flat tries) → perExam structure
+      if(pd.tries&&!pd.perExam){pd={perExam:{default:{tries:pd.tries,activeTry:pd.activeTry||1,examAttempts:pd.exams||[]}}};}
+      progressData=pd;
+    }
     setSS(true,'synced \u2713');
   }catch(e){console.warn('progress load:',e);setSS(false,'offline');}
+  // ── 3. Active exam + content ──────────────────────────────────────────────
+  ACTIVE_EXAM=examDefs[0];
+  var ep=progressData.perExam&&progressData.perExam[ACTIVE_EXAM.id];
+  if(ep){S.tries=ep.tries||[];S.activeTry=ep.activeTry||1;S.exams=ep.examAttempts||[];}
+  await loadExamContent(ACTIVE_EXAM.id);
+}
+
+async function loadExamContent(examId){
+  var def=examId==='default';
+  var qK=def?'questions':'exam_'+examId+'_questions';
+  var eK=def?'explanations':'exam_'+examId+'_explanations';
+  var cK=def?'corrections':'exam_'+examId+'_corrections';
+  var catK=def?'categories':'exam_'+examId+'_categories';
+  QS=[];S.explanations={};S.corrections={};S.categories={};S.categoryList=[];S.cache={};
   try{
-    var rc=await SB.from('quiz_content').select('key,data').in('key',['questions','explanations','corrections','categories']);
+    var rc=await SB.from('quiz_content').select('key,data').in('key',[qK,eK,cK,catK]);
     if(!rc.error&&rc.data){
-      var qRow=rc.data.find(function(r){return r.key==='questions';});
-      // Apply repairQuestion to catch any missing fields in DB data
-      QS=(qRow&&qRow.data&&qRow.data.length)?qRow.data.map(repairQuestion):_SEED_QS.slice();
-      QS.sort(function(a,b){return a.id-b.id;});
       rc.data.forEach(function(row){
-        if(row.key==='explanations'){var exp=row.data||{};Object.keys(exp).forEach(function(k){var id=parseInt(k);S.explanations[id]=exp[k];S.cache[id]=exp[k];});}
-        if(row.key==='corrections'){S.corrections=row.data||{};}
-        if(row.key==='categories'){S.categories=row.data.categories||{};S.categoryList=row.data.categoryList||[];}
+        if(row.key===qK){QS=(row.data&&row.data.length)?row.data.map(repairQuestion):(def?_SEED_QS.slice():[]);QS.sort(function(a,b){return a.id-b.id;});}
+        if(row.key===eK){Object.keys(row.data||{}).forEach(function(k){var n=parseInt(k);S.explanations[n]=row.data[k];S.cache[n]=row.data[k];});}
+        if(row.key===cK){S.corrections=row.data||{};}
+        if(row.key===catK){S.categories=row.data.categories||{};S.categoryList=row.data.categoryList||[];}
       });
-    }else{QS=_SEED_QS.slice();}
-  }catch(e){console.warn('content load:',e);QS=_SEED_QS.slice();}
+      if(!QS.length&&def)QS=_SEED_QS.slice();
+    }else if(def){QS=_SEED_QS.slice();}
+  }catch(e){console.warn('content load:',e);if(def)QS=_SEED_QS.slice();}
 }
 
 async function dbsave(){
   if(!SB||!USERID||IS_GUEST)return;
   try{
-    var r=await SB.from('quiz_progress').upsert({user_id:USERID,data:{tries:S.tries,activeTry:S.activeTry,exams:S.exams},updated_at:new Date().toISOString()});
+    if(!progressData.perExam)progressData.perExam={};
+    var eid=ACTIVE_EXAM?ACTIVE_EXAM.id:'default';
+    progressData.perExam[eid]={tries:S.tries,activeTry:S.activeTry,examAttempts:S.exams};
+    var r=await SB.from('quiz_progress').upsert({user_id:USERID,data:progressData,updated_at:new Date().toISOString()});
     if(r.error)throw r.error;setSS(true,'saved \u2713');
   }catch(e){setSS(false,'save failed');}
 }
@@ -427,12 +464,18 @@ async function dbsave(){
 async function saveContent(){
   if(!SB)return false;
   try{
+    var def=!ACTIVE_EXAM||ACTIVE_EXAM.id==='default';
+    var eid=ACTIVE_EXAM?ACTIVE_EXAM.id:'default';
+    var qK=def?'questions':'exam_'+eid+'_questions';
+    var eK=def?'explanations':'exam_'+eid+'_explanations';
+    var cK=def?'corrections':'exam_'+eid+'_corrections';
+    var catK=def?'categories':'exam_'+eid+'_categories';
     var expObj={};Object.keys(S.explanations).forEach(function(k){expObj[k]=S.explanations[k];});
     await SB.from('quiz_content').upsert([
-      {key:'questions',data:QS,updated_at:new Date().toISOString()},
-      {key:'explanations',data:expObj,updated_at:new Date().toISOString()},
-      {key:'corrections',data:S.corrections,updated_at:new Date().toISOString()},
-      {key:'categories',data:{categories:S.categories,categoryList:S.categoryList},updated_at:new Date().toISOString()}
+      {key:qK,data:QS,updated_at:new Date().toISOString()},
+      {key:eK,data:expObj,updated_at:new Date().toISOString()},
+      {key:cK,data:S.corrections,updated_at:new Date().toISOString()},
+      {key:catK,data:{categories:S.categories,categoryList:S.categoryList},updated_at:new Date().toISOString()}
     ]);
     return true;
   }catch(e){console.error('saveContent:',e);return false;}
@@ -584,9 +627,18 @@ async function fetchX(q){
 
 // ── Mock exam ─────────────────────────────────────────────────────────────
 var EXAM_SECS=5400;
-function buildExamQuestions(){var targets={single:58,multi:2,matching:4,ordering:1};var result=[];Object.keys(targets).forEach(function(t){var pool=QS.filter(function(q){return q.type===t;}).slice();pool.sort(function(){return Math.random()-.5;});result=result.concat(pool.slice(0,targets[t]));});result.sort(function(){return Math.random()-.5;});return result;}
-function startExam(){if(examInterval)clearInterval(examInterval);var qs=buildExamQuestions();S.exam={questions:qs,answers:{},flagged:{},idx:0,startTime:Date.now(),submitted:false,sel:null,matchSel:{},orderItems:null};S.view='exam';render();examInterval=setInterval(tickExamTimer,1000);}
-function tickExamTimer(){if(!S.exam||S.exam.submitted){clearInterval(examInterval);return;}var elapsed=Math.floor((Date.now()-S.exam.startTime)/1000);var rem=Math.max(0,EXAM_SECS-elapsed);var el=document.getElementById('examTimerEl');if(el){var m=Math.floor(rem/60),s=rem%60;el.textContent=m+':'+(s<10?'0':'')+s;el.className='exam-timer'+(rem<300?' crit':rem<600?' warn':'');}if(rem===0)submitExam(true);}
+function buildExamQuestions(){
+  var exam=ACTIVE_EXAM||{totalQ:65,drawMode:'proportional'};
+  if(exam.drawMode==='proportional'){
+    var targets={single:58,multi:2,matching:4,ordering:1};var result=[];
+    Object.keys(targets).forEach(function(t){var pool=QS.filter(function(q){return q.type===t;}).slice();pool.sort(function(){return Math.random()-.5;});result=result.concat(pool.slice(0,targets[t]));});
+    result.sort(function(){return Math.random()-.5;});return result;
+  }
+  var pool=QS.slice().sort(function(){return Math.random()-.5;});
+  return pool.slice(0,Math.min(exam.totalQ||QS.length,QS.length));
+}
+function startExam(){if(examInterval)clearInterval(examInterval);var qs=buildExamQuestions();var secs=(ACTIVE_EXAM?ACTIVE_EXAM.timeMins:90)*60;S.exam={questions:qs,answers:{},flagged:{},idx:0,startTime:Date.now(),submitted:false,sel:null,matchSel:{},orderItems:null,secs:secs};S.view='exam';render();examInterval=setInterval(tickExamTimer,1000);}
+function tickExamTimer(){if(!S.exam||S.exam.submitted){clearInterval(examInterval);return;}var elapsed=Math.floor((Date.now()-S.exam.startTime)/1000);var rem=Math.max(0,(S.exam.secs||EXAM_SECS)-elapsed);var el=document.getElementById('examTimerEl');if(el){var m=Math.floor(rem/60),s=rem%60;el.textContent=m+':'+(s<10?'0':'')+s;el.className='exam-timer'+(rem<300?' crit':rem<600?' warn':'');}if(rem===0)submitExam(true);}
 function examGoTo(idx){saveExamCurrentAnswer();S.exam.idx=idx;var q=S.exam.questions[idx];S.exam.sel=S.exam.answers[q.id]||null;S.exam.matchSel=S.exam.answers[q.id]?JSON.parse(JSON.stringify(S.exam.answers[q.id])):{};var qi=q.items||q.correct||[];S.exam.orderItems=S.exam.answers[q.id]?S.exam.answers[q.id].slice():(q.type==='ordering'?qi.slice():null);render();}
 function saveExamCurrentAnswer(){if(!S.exam||S.exam.submitted)return;var q=S.exam.questions[S.exam.idx];if(!q)return;if((q.type==='single'||q.type==='multi')&&S.exam.sel&&S.exam.sel.length)S.exam.answers[q.id]=S.exam.sel.slice();else if(q.type==='matching'&&Object.keys(S.exam.matchSel).length===q.pairs.length)S.exam.answers[q.id]=JSON.parse(JSON.stringify(S.exam.matchSel));else if(q.type==='ordering'&&S.exam.orderItems)S.exam.answers[q.id]=S.exam.orderItems.slice();}
 function submitExam(auto){
@@ -594,8 +646,14 @@ function submitExam(auto){
   if(!auto){var un=S.exam.questions.filter(function(q){return!S.exam.answers[q.id];}).length;if(!confirm(un>0?'You have '+un+' unanswered question'+(un>1?'s':'')+'. Submit anyway?':'Submit the exam now?'))return;}
   clearInterval(examInterval);S.exam.submitted=true;
   var correct=0,total=S.exam.questions.length;S.exam.questions.forEach(function(q){if(S.exam.answers[q.id]&&isOK(q,S.exam.answers[q.id]))correct++;});
-  var elapsed=Math.floor((Date.now()-S.exam.startTime)/1000);var score=Math.round(100+(correct/total)*900);
-  S.exams.push({date:new Date().toLocaleDateString('en-GB'),score:score,passed:score>=700,correct:correct,total:total,elapsed:elapsed,answers:JSON.parse(JSON.stringify(S.exam.answers)),qids:S.exam.questions.map(function(q){return q.id;})});
+  var elapsed=Math.floor((Date.now()-S.exam.startTime)/1000);
+  var _ex=ACTIVE_EXAM||{scoreSystem:'aws',passScore:700,scoreMax:1000};
+  var score;
+  if(_ex.scoreSystem==='percent')score=Math.round(correct/total*100);
+  else if(_ex.scoreSystem==='custom')score=Math.round(correct/total*(_ex.scoreMax||1000));
+  else score=Math.round(100+(correct/total)*900);
+  var passed=score>=_ex.passScore;
+  S.exams.push({date:new Date().toLocaleDateString('en-GB'),score:score,passed:passed,correct:correct,total:total,elapsed:elapsed,answers:JSON.parse(JSON.stringify(S.exam.answers)),qids:S.exam.questions.map(function(q){return q.id;})});
   sched();render();
 }
 function exitExam(){if(!confirm('Exit exam? Progress will not be saved.'))return;clearInterval(examInterval);S.exam=null;setView('examSetup');}
@@ -616,7 +674,7 @@ function fmtTime(secs){var m=Math.floor(secs/60),s=secs%60;return m+'m '+(s<10?'
 
 // ── Nav active tab update ─────────────────────────────────────────────────
 function updateNavTabs(){
-  var map={quiz:'hnav-quiz',stats:'hnav-stats',focus:'hnav-focus',examSetup:'hnav-examSetup',exam:'hnav-examSetup',sync:'hnav-sync'};
+  updateLogoEl();var map={quiz:'hnav-quiz',stats:'hnav-stats',focus:'hnav-focus',examSetup:'hnav-examSetup',exam:'hnav-examSetup',sync:'hnav-sync'};
   ['hnav-quiz','hnav-stats','hnav-focus','hnav-examSetup','hnav-sync'].forEach(function(id){var el=document.getElementById(id);if(el)el.classList.remove('hnav-act');});
   var aid=map[S.view]||'hnav-quiz';
   var ael=document.getElementById(aid);if(ael)ael.classList.add('hnav-act');
@@ -829,7 +887,8 @@ function rExam(m){
 
 function rExamResults(m){
   var res=S.exams[S.exams.length-1];if(!res)return;var pct=Math.round(res.correct/res.total*100);
-  var h='<div style="text-align:center;padding:20px 0 14px"><div class="score-circle '+(res.passed?'pass':'fail')+'"><div class="score-num" style="color:'+(res.passed?'var(--ok)':'var(--err)')+'">'+res.score+'</div><div class="score-sub">/ 1000</div></div><div style="font-size:20px;font-weight:700;color:'+(res.passed?'var(--ok-txt)':'var(--err-txt)')+';">'+(res.passed?'&#127881; PASS':'&#128546; FAIL')+'</div><div style="font-size:13px;color:var(--muted);margin-top:4px">Pass score: 700 &middot; '+(res.passed?'Congratulations!':'Keep studying!')+'</div></div>';
+  var _ex2=ACTIVE_EXAM||{scoreSystem:'aws',passScore:700,scoreMax:1000};var _sMx=_ex2.scoreSystem==='percent'?100:(_ex2.scoreSystem==='custom'?(_ex2.scoreMax||1000):1000);var _pD=_ex2.passScore+(_ex2.scoreSystem==='percent'?'%':'/'+_sMx);var _sD=res.score;var _sSb=_ex2.scoreSystem==='percent'?'%':'/'+_sMx;
+  var h='<div style="text-align:center;padding:20px 0 14px"><div class="score-circle '+(res.passed?'pass':'fail')+'"><div class="score-num" style="color:'+(res.passed?'var(--ok)':'var(--err)')+'">'+_sD+'</div><div class="score-sub">'+_sSb+'</div></div><div style="font-size:20px;font-weight:700;color:'+(res.passed?'var(--ok-txt)':'var(--err-txt)')+';">'+(res.passed?'&#127881; PASS':'&#128546; FAIL')+'</div><div style="font-size:13px;color:var(--muted);margin-top:4px">Pass: '+_pD+' &middot; '+(res.passed?'Congratulations!':'Keep studying!')+'</div></div>';
   h+='<div class="sg"><div class="sc"><div class="sn sn-ok">'+res.correct+'</div><div class="sl">Correct</div></div><div class="sc"><div class="sn sn-err">'+(res.total-res.correct)+'</div><div class="sl">Wrong</div></div><div class="sc"><div class="sn">'+pct+'%</div><div class="sl">Accuracy</div></div><div class="sc"><div class="sn">'+fmtTime(res.elapsed)+'</div><div class="sl">Time used</div></div></div>';
   h+='<div class="h2">Review answers</div><div class="exam-qmap">';S.exam.questions.forEach(function(qq,i){var a=S.exam.answers[qq.id];var cls='eqd '+(a?(isOK(qq,a)?'eok':'eerr'):'');h+='<div class="'+cls+'" onclick="rExamReview('+i+')" title="Q'+(i+1)+'">'+(i+1)+'</div>';});
   h+='</div><div id="examReviewSlot"></div><div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px"><button class="btn btn-pri" onclick="S.exam=null;setView(\'examSetup\')">&#127891; New exam</button><button class="btn" onclick="S.exam=null;setView(\'quiz\')">&#128221; Back to study</button></div>';
@@ -851,9 +910,18 @@ function rExamReview(i){
 
 // ── Stats views ───────────────────────────────────────────────────────────
 function rExamSetup(m){
-  var h='<div class="h2">&#127891; Mock Exam</div>';
-  h+='<div class="try-sec"><div class="sg"><div class="sc"><div class="sn">65</div><div class="sl">Questions</div></div><div class="sc"><div class="sn">90</div><div class="sl">Minutes</div></div><div class="sc"><div class="sn" style="font-size:16px">700/1000</div><div class="sl">Pass score</div></div><div class="sc"><div class="sn">~67%</div><div class="sl">To pass</div></div></div><p style="font-size:13px;color:var(--muted);line-height:1.6;margin-bottom:14px">Randomly drawn proportionally: 58 single, 2 multi, 4 matching, 1 ordering. Auto-submits when time runs out.</p><button class="btn-acc" onclick="startExam()">Start Mock Exam &#8594;</button></div>';
-  if(S.exams&&S.exams.length){h+='<div class="h2" style="margin-top:18px">Past Attempts</div>';var list=S.exams.slice().reverse();list.forEach(function(e,i){var pct=Math.round(e.correct/e.total*100);h+='<div class="exam-row '+(e.passed?'exam-row-pass':'exam-row-fail')+'"><span style="font-weight:700">'+(list.length-i)+'. '+e.date+'</span><span style="font-size:13px">'+e.correct+'/'+e.total+' ('+pct+'%)</span><span style="font-size:13px">'+fmtTime(e.elapsed)+' used</span><span style="font-weight:700;font-size:15px;color:'+(e.passed?'var(--ok-txt)':'var(--err-txt)')+'">'+e.score+' '+(e.passed?'&#10003; PASS':'&#10007; FAIL')+'</span></div>';});}
+  var exam=ACTIVE_EXAM||{provider:'AWS',name:'AI PRACTITIONER',totalQ:65,timeMins:90,passScore:700,scoreSystem:'aws',drawMode:'proportional'};
+  var sMax=exam.scoreSystem==='percent'?100:(exam.scoreSystem==='custom'?(exam.scoreMax||1000):1000);
+  var passDisp=exam.passScore+(exam.scoreSystem==='percent'?'%':'/'+sMax);
+  var pctPass=exam.scoreSystem==='percent'?exam.passScore+'%':Math.round(exam.passScore/sMax*100)+'%';
+  var drawDesc=exam.drawMode==='proportional'?'Drawn proportionally by question type. ':'Drawn randomly from pool. ';
+  var h='<div class="h2">&#127891; '+esc(exam.provider)+' &mdash; '+esc(exam.name)+'</div>';
+  h+='<div class="try-sec"><div class="sg"><div class="sc"><div class="sn">'+exam.totalQ+'</div><div class="sl">Questions</div></div><div class="sc"><div class="sn">'+exam.timeMins+'</div><div class="sl">Minutes</div></div><div class="sc"><div class="sn" style="font-size:16px">'+passDisp+'</div><div class="sl">Pass score</div></div><div class="sc"><div class="sn">'+pctPass+'</div><div class="sl">To pass</div></div></div>';
+  h+='<p style="font-size:13px;color:var(--muted);line-height:1.6;margin-bottom:14px">'+drawDesc+'Auto-submits when time runs out.</p>';
+  if(!QS.length)h+='<div style="font-size:13px;color:var(--muted);padding:4px 0 10px">No questions yet. Add them in Study mode.</div>';
+  else h+='<button class="btn-acc" onclick="startExam()">Start Exam &#8594;</button>';
+  h+='</div>';
+  if(S.exams&&S.exams.length){h+='<div class="h2" style="margin-top:18px">Past Attempts</div>';var list=S.exams.slice().reverse();list.forEach(function(e,i){var pct=Math.round(e.correct/e.total*100);var sDisp=exam.scoreSystem==='percent'?e.score+'%':e.score;h+='<div class="exam-row '+(e.passed?'exam-row-pass':'exam-row-fail')+'"><span style="font-weight:700">'+(list.length-i)+'. '+e.date+'</span><span style="font-size:13px">'+e.correct+'/'+e.total+' ('+pct+'%)</span><span style="font-size:13px">'+fmtTime(e.elapsed)+' used</span><span style="font-weight:700;font-size:15px;color:'+(e.passed?'var(--ok-txt)':'var(--err-txt)')+'">'+sDisp+' '+(e.passed?'&#10003; PASS':'&#10007; FAIL')+'</span></div>';});}
   m.innerHTML=h;
 }
 function rStats(m){
@@ -916,7 +984,7 @@ function rSync(m){
   var adminCard=document.createElement('div');adminCard.className='try-sec';
   var adminRow=document.createElement('div');adminRow.style.cssText='display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:'+(S.adminMode?'14px':'0');
   var adminBtn=document.createElement('button');adminBtn.className='btn'+(S.adminMode?' btn-pri':'');adminBtn.innerHTML=S.adminMode?'&#128275; Admin mode ON \u2014 click to exit':'&#128272; Enable admin mode';adminBtn.onclick=toggleAdmin;adminRow.appendChild(adminBtn);
-  if(S.adminMode){var aNote=document.createElement('span');aNote.style.cssText='font-size:12px;color:var(--acc);font-weight:700';aNote.textContent='Edit/Delete/Tag buttons active on every question';adminRow.appendChild(aNote);var addQBtn=document.createElement('button');addQBtn.className='btn btn-pri';addQBtn.innerHTML='&#10010; Add Question';addQBtn.onclick=openAddQuestionModal;adminRow.appendChild(addQBtn);var migrateBtn=document.createElement('button');migrateBtn.className='btn';migrateBtn.innerHTML='&#128190; Push '+QS.length+' questions to DB';migrateBtn.onclick=function(){if(!confirm('Push all '+QS.length+' questions to DB?'))return;migrateBtn.disabled=true;migrateBtn.textContent='Saving\u2026';saveContent().then(function(ok){migrateBtn.textContent=ok?'\u2713 Pushed!':'\u26a0 Failed';migrateBtn.style.color=ok?'var(--ok-txt)':'var(--err-txt)';});};adminRow.appendChild(migrateBtn);}
+  if(S.adminMode){var aNote=document.createElement('span');aNote.style.cssText='font-size:12px;color:var(--acc);font-weight:700';aNote.textContent='Edit/Delete/Tag buttons active on every question';adminRow.appendChild(aNote);var addQBtn=document.createElement('button');addQBtn.className='btn btn-pri';addQBtn.innerHTML='&#10010; Add Question';addQBtn.onclick=openAddQuestionModal;adminRow.appendChild(addQBtn);var mgrBtn=document.createElement('button');mgrBtn.className='btn';mgrBtn.innerHTML='&#127891; Manage Exams';mgrBtn.onclick=openManageExamsModal;adminRow.appendChild(mgrBtn);var migrateBtn=document.createElement('button');migrateBtn.className='btn';migrateBtn.innerHTML='&#128190; Push '+QS.length+' questions to DB';migrateBtn.onclick=function(){if(!confirm('Push all '+QS.length+' questions to DB?'))return;migrateBtn.disabled=true;migrateBtn.textContent='Saving\u2026';saveContent().then(function(ok){migrateBtn.textContent=ok?'\u2713 Pushed!':'\u26a0 Failed';migrateBtn.style.color=ok?'var(--ok-txt)':'var(--err-txt)';});};adminRow.appendChild(migrateBtn);}
   adminCard.appendChild(adminRow);
   if(S.adminMode){
     var sep=document.createElement('div');sep.style.cssText='border-top:1px solid var(--bdr);margin:12px 0';adminCard.appendChild(sep);
@@ -1040,6 +1108,121 @@ function saveEdit(qid){
   Object.assign(q,patch);S.corrections[qid]=patch;
   msg.style.color='var(--ok-txt)';msg.textContent='Saving\u2026';
   saveContent().then(function(ok){msg.textContent=ok?'\u2713 Saved!':'\u26a0 Local only';msg.style.color=ok?'var(--ok-txt)':'var(--warn-txt)';render();});
+}
+
+// ── Multi-Exam Support ────────────────────────────────────────────────────
+function updateLogoEl(){
+  var ae=ACTIVE_EXAM||{provider:'AWS',name:'AI PRACTITIONER'};
+  var p=document.getElementById('hdrProvTxt'),n=document.getElementById('hdrNameTxt'),a=document.getElementById('hdrSwArr'),l=document.getElementById('hdrLogoEl');
+  if(p)p.textContent=ae.provider;
+  if(n)n.textContent='\u00a0'+ae.name;
+  var multi=examDefs.length>1;
+  if(a)a.style.display=multi?'inline':'none';
+  if(l)l.style.cursor=multi?'pointer':'default';
+}
+function toggleExamSwitcher(){
+  if(examDefs.length<=1)return;
+  var dd=document.getElementById('examDropdown');if(!dd)return;
+  if(dd.classList.contains('open')){dd.classList.remove('open');return;}
+  var h='';
+  examDefs.forEach(function(e){
+    var act=ACTIVE_EXAM&&e.id===ACTIVE_EXAM.id;
+    h+='<div class="edd-item'+(act?' edd-act':'')+'" onclick="switchExam(\''+e.id+'\');document.getElementById(\'examDropdown\').classList.remove(\'open\')">';
+    h+='<span style="font-weight:800;color:var(--acc);font-size:11px;flex-shrink:0">'+esc(e.provider)+'</span>';
+    h+='<span style="font-size:12px;flex:1">'+esc(e.name)+'</span>';
+    if(act)h+='<span style="font-size:11px;flex-shrink:0">&#10003;</span>';
+    h+='</div>';
+  });
+  if(S.adminMode)h+='<div class="edd-add" onclick="openManageExamsModal();document.getElementById(\'examDropdown\').classList.remove(\'open\')">&#10010; Manage Exams</div>';
+  dd.innerHTML=h;dd.classList.add('open');
+  setTimeout(function(){document.addEventListener('click',function _cl(ev){if(!dd.contains(ev.target)){dd.classList.remove('open');}document.removeEventListener('click',_cl,true);},true);},20);
+}
+async function switchExam(examId){
+  if(ACTIVE_EXAM&&ACTIVE_EXAM.id===examId)return;
+  if(S.exam&&!S.exam.submitted){if(!confirm('An exam is in progress and will be lost. Switch anyway?'))return;clearInterval(examInterval);S.exam=null;}
+  setSS(false,'switching\u2026');
+  if(!progressData.perExam)progressData.perExam={};
+  if(ACTIVE_EXAM)progressData.perExam[ACTIVE_EXAM.id]={tries:S.tries,activeTry:S.activeTry,examAttempts:S.exams};
+  await dbsave();
+  ACTIVE_EXAM=examDefs.find(function(e){return e.id===examId;})||examDefs[0];
+  var ep=progressData.perExam&&progressData.perExam[ACTIVE_EXAM.id];
+  S.tries=ep?ep.tries||[]:[];S.activeTry=ep?ep.activeTry||1:1;S.exams=ep?ep.examAttempts||[]:[];
+  S.idx=0;S.activeCat='all';S.view='quiz';S.exam=null;rst();
+  await loadExamContent(ACTIVE_EXAM.id);
+  var td=getTD();S.idx=0;for(var i=0;i<QS.length;i++){if(!td.answers[QS[i].id]){S.idx=i;break;}}
+  updTryBtn();updateLogoEl();setSS(true,'synced \u2713');render();
+}
+function openManageExamsModal(){
+  var ex=document.getElementById('manageExamsOv');if(ex)ex.remove();
+  var ov=document.createElement('div');ov.className='overlay';ov.id='manageExamsOv';ov.style.zIndex='100';
+  var modal=document.createElement('div');modal.className='modal';modal.style.maxWidth='500px';
+  var _ss='aws';
+  function rebuildModal(){
+    var h='<h2>&#127891; Manage Exams</h2>';
+    examDefs.forEach(function(e){
+      var isAct=ACTIVE_EXAM&&e.id===ACTIVE_EXAM.id;
+      var sMax=e.scoreSystem==='percent'?100:(e.scoreSystem==='custom'?(e.scoreMax||1000):1000);
+      var pd=e.passScore+(e.scoreSystem==='percent'?'%':'/'+sMax);
+      h+='<div style="display:flex;align-items:center;gap:8px;padding:9px 12px;background:var(--surf2);border-radius:var(--rs);border:1px solid '+(isAct?'var(--acc)':'var(--bdr)')+';margin-bottom:7px">';
+      h+='<div style="flex:1"><div style="font-size:13px;font-weight:700"><span style="color:var(--acc)">'+esc(e.provider)+'</span> \u2014 '+esc(e.name)+'</div>';
+      h+='<div style="font-size:11px;color:var(--muted)">'+e.totalQ+'Q &middot; '+e.timeMins+' min &middot; Pass: '+pd+'</div></div>';
+      if(isAct)h+='<span style="font-size:10px;color:var(--acc);font-weight:700;flex-shrink:0">ACTIVE</span>';
+      else h+='<button class="btn" style="font-size:11px;flex-shrink:0" onclick="switchExam(\''+e.id+'\');document.getElementById(\'manageExamsOv\').remove()">Switch</button>';
+      if(examDefs.length>1&&!isAct)h+='<button class="btn" style="font-size:11px;color:var(--err-txt);border-color:var(--err);flex-shrink:0" onclick="_delExam(\''+e.id+'\')">&#128465;</button>';
+      h+='</div>';
+    });
+    h+='<div class="h2" style="margin-top:16px;margin-bottom:10px">&#10010; Create New Exam</div>';
+    h+='<div class="cef-row"><input class="cef" id="_cef_p" type="text" placeholder="Provider (e.g. AWS, AZURE)"><input class="cef" id="_cef_n" type="text" placeholder="Exam name (e.g. AZ-900)"></div>';
+    h+='<div class="cef-row"><input class="cef" id="_cef_q" type="number" placeholder="Questions (e.g. 65)" min="1" max="500"><input class="cef" id="_cef_t" type="number" placeholder="Time in minutes" min="1" max="600"></div>';
+    h+='<div style="font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px">Score system</div>';
+    h+='<div style="display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap">';
+    h+='<button class="ssb'+(_ss==='aws'?' ssb-on':'')+'" onclick="_ceSS(\'aws\')">AWS Scale (100-1000)</button>';
+    h+='<button class="ssb'+(_ss==='percent'?' ssb-on':'')+'" onclick="_ceSS(\'percent\')">Percentage (0-100%)</button>';
+    h+='<button class="ssb'+(_ss==='custom'?' ssb-on':'')+'" onclick="_ceSS(\'custom\')">Custom max score</button>';
+    h+='</div>';
+    h+='<div id="_cef_cusrow" style="display:'+(_ss==='custom'?'block':'none')+'"><input class="cef" id="_cef_max" type="number" placeholder="Max score (e.g. 900)" min="1"></div>';
+    h+='<div class="cef-row"><div><div style="font-size:12px;color:var(--muted);margin-bottom:4px">Pass threshold (in score units)</div><input class="cef" id="_cef_ps" type="number" placeholder="e.g. 700" style="margin-bottom:0"></div>';
+    h+='<div><div style="font-size:12px;color:var(--muted);margin-bottom:4px">Question draw mode</div><select class="cef" id="_cef_dm" style="margin-bottom:0"><option value="random">Random</option><option value="proportional">Proportional by type</option></select></div></div>';
+    h+='<div id="_cef_msg" style="font-size:12px;min-height:14px;margin-bottom:8px;line-height:1.4"></div>';
+    h+='<div style="display:flex;gap:8px"><button class="btn-acc" style="flex:1" onclick="_ceCreate()">&#10003; Create Exam</button><button class="btn" style="width:80px" onclick="document.getElementById(\'manageExamsOv\').remove()">Cancel</button></div>';
+    modal.innerHTML=h;
+  }
+  window._ceSS=function(v){_ss=v;rebuildModal();};
+  window._delExam=async function(eid){
+    var e=examDefs.find(function(x){return x.id===eid;});
+    if(!e||!confirm('Delete exam "'+e.provider+' \u2014 '+e.name+'"?\n\nThis removes the exam definition only. Questions stay in the database.'))return;
+    examDefs=examDefs.filter(function(x){return x.id!==eid;});
+    try{await SB.from('quiz_content').upsert([{key:'exam_defs',data:examDefs,updated_at:new Date().toISOString()}]);}catch(err){}
+    rebuildModal();updateLogoEl();
+  };
+  window._ceCreate=async function(){
+    var prov=(document.getElementById('_cef_p').value||'').trim().toUpperCase();
+    var name=(document.getElementById('_cef_n').value||'').trim().toUpperCase();
+    var totalQ=parseInt(document.getElementById('_cef_q').value)||0;
+    var timeMins=parseInt(document.getElementById('_cef_t').value)||0;
+    var passScore=parseFloat(document.getElementById('_cef_ps').value);
+    var scoreSystem=_ss;
+    var scoreMax=scoreSystem==='custom'?(parseInt((document.getElementById('_cef_max')||{}).value)||1000):undefined;
+    var drawMode=(document.getElementById('_cef_dm')||{}).value||'random';
+    var msg=document.getElementById('_cef_msg');
+    if(!prov){msg.style.color='var(--err-txt)';msg.textContent='Provider is required.';return;}
+    if(!name){msg.style.color='var(--err-txt)';msg.textContent='Exam name is required.';return;}
+    if(!totalQ){msg.style.color='var(--err-txt)';msg.textContent='Enter number of questions.';return;}
+    if(!timeMins){msg.style.color='var(--err-txt)';msg.textContent='Enter time in minutes.';return;}
+    if(isNaN(passScore)){msg.style.color='var(--err-txt)';msg.textContent='Enter a pass threshold.';return;}
+    var slug=prov.toLowerCase().replace(/[^a-z0-9]+/g,'-')+'-'+name.toLowerCase().replace(/[^a-z0-9]+/g,'-');
+    var id=slug+'-'+Date.now().toString(36);
+    var newEx={id:id,provider:prov,name:name,totalQ:totalQ,timeMins:timeMins,passScore:passScore,scoreSystem:scoreSystem,drawMode:drawMode};
+    if(scoreSystem==='custom')newEx.scoreMax=scoreMax;
+    examDefs.push(newEx);
+    msg.style.color='var(--muted)';msg.textContent='Saving\u2026';
+    try{
+      await SB.from('quiz_content').upsert([{key:'exam_defs',data:examDefs,updated_at:new Date().toISOString()}]);
+      msg.style.color='var(--ok-txt)';msg.textContent='\u2713 Exam created! Switching\u2026';
+      setTimeout(async function(){document.getElementById('manageExamsOv').remove();await switchExam(id);},800);
+    }catch(e){msg.style.color='var(--err-txt)';msg.textContent='Save failed: '+e.message;examDefs.pop();}
+  };
+  rebuildModal();ov.appendChild(modal);document.body.appendChild(ov);
 }
 
 // ── Password Management ───────────────────────────────────────────────────
