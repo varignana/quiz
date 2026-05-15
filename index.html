@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>AWS AI Practitioner – Quiz</title>
+<title>ExamForge</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script type="application/json" id="qdata">[]</script>
 <style>
@@ -235,7 +235,7 @@ input.jmp{border:1px solid var(--bdr2);border-radius:var(--rs);background:var(--
 
 <div class="overlay" id="authOverlay">
   <div class="modal">
-    <h2>&#128274; AWS AI Quiz</h2>
+    <h2>&#128274; ExamForge</h2>
     <p class="minfo" id="authDesc">Sign in with your username and password.</p>
     <label class="mlabel">Username</label>
     <input class="minput" id="authUser" type="text" placeholder="e.g. frankie42" autocomplete="username" spellcheck="false">
@@ -1044,7 +1044,7 @@ function rSync(m){
     var btnRow=document.createElement('div');btnRow.style.cssText='display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px';var dlBtn=document.createElement('button');dlBtn.className='btn';dlBtn.innerHTML='\u2b07 Download JSON';dlBtn.onclick=exportJSON;var ulBtn=document.createElement('button');ulBtn.className='btn btn-pri';ulBtn.innerHTML='\u2b06 Upload JSON';ulBtn.onclick=triggerImport;btnRow.appendChild(dlBtn);btnRow.appendChild(ulBtn);adminCard.appendChild(btnRow);
     var fileInput=document.createElement('input');fileInput.type='file';fileInput.accept='.json';fileInput.style.display='none';fileInput.id='importFileInput';fileInput.onchange=function(){handleImportFile(this);};adminCard.appendChild(fileInput);
     var importMsg=document.createElement('div');importMsg.id='importMsg';importMsg.style.cssText='font-size:13px;min-height:16px;margin-bottom:12px';adminCard.appendChild(importMsg);
-    var IMPORT_PROMPT='You will receive a JSON array of AWS exam questions. Your job is to fill every "explanation": null.\nReturn ONLY valid JSON \u2014 no markdown, no backticks, no text outside the JSON.\nDo NOT add, remove, or rename any keys. Only fill null explanation values.\nYou may process the whole file or any subset \u2014 even a single question is fine.\n\n\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\nEXPLANATION FORMAT BY TYPE (with full real examples)\n\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\n\n\u2500 TYPE "single" (one correct answer) \u2500\n"explanation": {\n  "concept": "Amazon SageMaker is the primary AWS service for building, training, and deploying ML models.",\n  "A": { "ok": true,  "why": "SageMaker provides a fully managed environment for the entire ML workflow, including built-in algorithms, notebook instances, and one-click deployment." },\n  "B": { "ok": false, "why": "AWS Lambda is a serverless compute service for running code, not for training ML models." },\n  "C": { "ok": false, "why": "Amazon S3 is object storage; it can store training data but does not train models." },\n  "D": { "ok": false, "why": "Amazon EC2 provides raw compute instances; while you could install ML tools, it is not a managed ML platform." }\n}\n\u2022 Include ALL option letters present in the question (A, B, C, D, E\u2026). "ok": true = correct answer.\n\n\u2500 TYPE "multi" (multiple correct answers) \u2500\nSame structure as "single" but multiple keys have "ok": true.\n"explanation": {\n  "concept": "Amazon Rekognition provides image and video analysis capabilities including object detection and facial recognition.",\n  "A": { "ok": true,  "why": "Rekognition can detect objects and scenes in images, returning labels with confidence scores." },\n  "B": { "ok": true,  "why": "Facial analysis is a core Rekognition feature, supporting age estimation, emotion detection, and face comparison." },\n  "C": { "ok": false, "why": "Natural language processing is handled by Comprehend, not Rekognition." },\n  "D": { "ok": false, "why": "Time-series forecasting is the purpose of Amazon Forecast, not an image/video service." },\n  "E": { "ok": false, "why": "Speech-to-text transcription belongs to Amazon Transcribe." }\n}\n\n\u2500 TYPE "ordering" (drag items into correct sequence) \u2500\n"explanation": {\n  "concept": "Training an ML model in SageMaker follows a defined pipeline from data preparation to deployment.",\n  "steps": [\n    { "step": "Collect and label training data", "why": "High-quality labeled data is the foundation of any supervised ML model; without it the model cannot learn." },\n    { "step": "Choose a SageMaker built-in algorithm or custom script", "why": "The algorithm determines how the model learns from the data; it must be selected before training begins." },\n    { "step": "Launch a SageMaker training job", "why": "SageMaker provisions managed compute, runs the training script, and saves the model artifact to S3." },\n    { "step": "Evaluate model metrics in SageMaker Experiments", "why": "Reviewing accuracy, precision, and recall before deployment prevents shipping an underperforming model." },\n    { "step": "Deploy the model to a SageMaker endpoint", "why": "An endpoint exposes the model as a REST API so applications can send inference requests in real time." }\n  ]\n}\n\u26a0 "steps" MUST be inside "explanation". Do NOT put them at the question root.\n\u26a0 Each "step" value must match the exact text of the corresponding item in the question.\n\n\u2500 TYPE "matching" (match descriptions to options) \u2500\n"explanation": {\n  "concept": "AWS AI services are purpose-built managed services, each targeting a specific AI/ML use case.",\n  "explanations": [\n    { "description": "Converts spoken audio into text", "correct": "Amazon Transcribe", "why": "Transcribe uses automatic speech recognition (ASR) to produce text transcripts from audio files or live streams." },\n    { "description": "Extracts key phrases and sentiment from text", "correct": "Amazon Comprehend", "why": "Comprehend applies NLP to identify entities, sentiment, language, and key phrases without custom ML code." },\n    { "description": "Generates human-like text and answers questions", "correct": "Amazon Bedrock", "why": "Bedrock provides access to foundation models (FMs) from leading AI companies via a single managed API." },\n    { "description": "Identifies objects and people in images", "correct": "Amazon Rekognition", "why": "Rekognition uses deep learning to detect labels, faces, text, and inappropriate content in images and video." }\n  ]\n}\n\u26a0 "explanations" array MUST be inside "explanation". Do NOT put it at the question root.\n\u26a0 Each "description" must match the exact text from the question\'s pairs array.\n\n\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\n COMMON MISTAKES\n\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\n\u2717 { "id":114, "steps":[...], "explanation": null }    \u2190 steps/explanations at root\n\u2713 { "id":114, "explanation": { "concept":"...", "steps":[...] } }\n\n\u2717 { "description": "description": "Some text" }    \u2190 duplicate key (JSON error)\n\u2713 { "description": "Some text" }\n\nFor large files: process 30\u201350 questions per request and upload each batch separately.';
+    var IMPORT_PROMPT=buildAIPrompt(ACTIVE_EXAM);
 
     var fmtToggle=document.createElement('button');fmtToggle.className='link-btn';fmtToggle.style.fontSize='12px';fmtToggle.textContent='Show AI prompt & format guide \u25be';fmtToggle.onclick=function(){var ref=document.getElementById('jsonFmtRef');var open=ref.style.display!=='none';ref.style.display=open?'none':'block';fmtToggle.textContent=open?'Show AI prompt & format guide \u25be':'Hide AI prompt & format guide \u25b4';};adminCard.appendChild(fmtToggle);
     var fmtRef=document.createElement('div');fmtRef.id='jsonFmtRef';fmtRef.style.display='none';fmtRef.style.marginTop='10px';
@@ -1070,14 +1070,14 @@ function rSync(m){
 
 // ── Export / Import ───────────────────────────────────────────────────────
 function exportJSON(){
-  var exportData={_readme:['See Account tab \u2192 "Show AI prompt & format guide" for the full prompt.'],questions:QS.map(function(q){var exp=S.explanations[q.id]||S.cache[q.id]||null;return Object.assign({},q,{explanation:exp});})};
-  try{var json=JSON.stringify(exportData,null,2);var blob=new Blob([json],{type:'application/json'});var url=URL.createObjectURL(blob);var a=document.createElement('a');a.href=url;a.download='aws-quiz-explanations.json';document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(url);}catch(e){alert('Export failed: '+e.message);}
+  var _pLines=buildAIPrompt(ACTIVE_EXAM).split('\n');var exportData={_readme:_pLines,questions:QS.map(function(q){var exp=S.explanations[q.id]||S.cache[q.id]||null;return Object.assign({},q,{explanation:exp});})};
+  try{var json=JSON.stringify(exportData,null,2);var blob=new Blob([json],{type:'application/json'});var url=URL.createObjectURL(blob);var a=document.createElement('a');a.href=url;a.download=(ACTIVE_EXAM?(ACTIVE_EXAM.provider+'-'+ACTIVE_EXAM.name).toLowerCase().replace(/[^a-z0-9]+/g,'-'):'exam')+'-questions.json';document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(url);}catch(e){alert('Export failed: '+e.message);}
 }
 function triggerImport(){var inp=document.getElementById('importFileInput');if(inp)inp.click();}
 
 function validateQuestion(q){
   if(!q||typeof q!=='object')return'not an object';if(!q.id||typeof q.id!=='number')return'missing numeric id';if(!q.stem||typeof q.stem!=='string')return'missing stem';
-  var validTypes=['single','multi','ordering','matching'];if(!q.type||!validTypes.includes(q.type))return'type must be one of: '+validTypes.join(', ');
+  var validTypes=['single','multi','truefalse','ordering','matching'];if(!q.type||!validTypes.includes(q.type))return'type must be one of: '+validTypes.join(', ');
   if(q.type==='single'||q.type==='multi'){if(!q.options||typeof q.options!=='object')return'missing options object';if(!q.correct||!Array.isArray(q.correct)||!q.correct.length)return'missing correct array';}
   if(q.type==='ordering'){if((!q.items||!Array.isArray(q.items)||!q.items.length)&&(!q.correct||!Array.isArray(q.correct)||!q.correct.length))return'ordering needs items or correct array';} 
   if(q.type==='matching'){if(!q.options||!Array.isArray(q.options))return'matching needs options array';if(!q.pairs||!Array.isArray(q.pairs)||!q.pairs.length)return'matching needs pairs array';}
@@ -1166,6 +1166,7 @@ function updateLogoEl(){
   var p=document.getElementById('hdrProvTxt'),n=document.getElementById('hdrNameTxt'),a=document.getElementById('hdrSwArr'),l=document.getElementById('hdrLogoEl');
   if(p)p.textContent=ae.provider;
   if(n)n.textContent='\u00a0'+ae.name;
+  document.title='ExamForge — '+ae.provider+' '+ae.name;
   var multi=examDefs.length>1;
   if(a)a.style.display=multi?'inline':'none';
   if(l)l.style.cursor=multi?'pointer':'default';
@@ -1323,6 +1324,111 @@ function openManageExamsModal(){
     }
   };
   rebuildModal();ov.appendChild(modal);document.body.appendChild(ov);
+}
+
+// ── AI Prompt Builder (dynamic per exam + allowedTypes) ──────────────────
+function buildAIPrompt(exam){
+  exam=exam||ACTIVE_EXAM||{provider:'Exam',name:'',totalQ:65,timeMins:90,passScore:70,allowedTypes:['single','multi']};
+  var allowed=exam.allowedTypes||['single','multi','truefalse','matching','ordering'];
+  var examLabel=(exam.provider||'')+(exam.name?' \u2014 '+exam.name:'');
+  var L=[];
+  var hr='\u2550'.repeat(62);var thr='\u2500'.repeat(62);
+  L.push(hr);L.push('ExamForge \u2014 AI QUESTION & EXPLANATION PROMPT');L.push(hr);L.push('');
+  L.push('EXAM: '+examLabel);
+  L.push('Questions: '+exam.totalQ+'  |  Time: '+exam.timeMins+' min  |  Pass score: '+exam.passScore);
+  L.push('Active question types for this exam: '+allowed.join(', '));
+  L.push('');
+  L.push(thr);L.push('PART A \u2014 ADD NEW QUESTIONS');L.push(thr);
+  L.push('Append new objects to the "questions" array in the downloaded JSON.');
+  L.push('Rules:');
+  L.push('\u2022 IDs must be sequential integers (last existing ID + 1, + 2, \u2026)');
+  L.push('\u2022 Set "explanation": null on every new question (fill it in Part B)');
+  L.push('\u2022 "category" is a short topic label, e.g. "History", "Law & Rights"');
+  L.push('\u2022 "stem" must be accurate, unambiguous, and self-contained');
+  L.push('\u2022 Return raw JSON only \u2014 no markdown fences, no extra text');
+  L.push('');
+  L.push('QUESTION FORMATS (only the types active for this exam are shown below)');
+  L.push('');
+
+  if(allowed.indexOf('single')>=0){
+    L.push('\u25b6 TYPE "single" \u2014 One correct answer from 4 options');
+    L.push(JSON.stringify({id:1,type:'single',stem:'Which of the following best describes [concept]?',options:[{key:'A',text:'First option'},{key:'B',text:'Second option'},{key:'C',text:'Correct option'},{key:'D',text:'Fourth option'}],correct:['C'],category:'Topic Name',explanation:null},null,2));
+    L.push('');
+  }
+  if(allowed.indexOf('multi')>=0){
+    L.push('\u25b6 TYPE "multi" \u2014 Choose ALL correct answers (stem must say "Which TWO\u2026" or "Select all that apply\u2026")');
+    L.push(JSON.stringify({id:2,type:'multi',stem:'Which TWO of the following are examples of [concept]?',options:[{key:'A',text:'Correct option A'},{key:'B',text:'Wrong option'},{key:'C',text:'Correct option C'},{key:'D',text:'Wrong option'}],correct:['A','C'],category:'Topic Name',explanation:null},null,2));
+    L.push('');
+  }
+  if(allowed.indexOf('truefalse')>=0){
+    L.push('\u25b6 TYPE "truefalse" \u2014 Is the statement True or False?');
+    L.push('  \u2022 "stem" contains the factual statement to evaluate \u2014 no options array needed');
+    L.push('  \u2022 "correct" is ["True"] or ["False"]');
+    L.push('  \u2022 Write clear, unambiguous statements that are definitively true or false');
+    L.push('Example with correct answer True:');
+    L.push(JSON.stringify({id:3,type:'truefalse',stem:'[A factual statement that is clearly and definitively TRUE about this topic.]',correct:['True'],category:'Topic Name',explanation:null},null,2));
+    L.push('Example with correct answer False:');
+    L.push(JSON.stringify({id:4,type:'truefalse',stem:'[A statement that contains a specific factual error, testing whether the student can identify it.]',correct:['False'],category:'Topic Name',explanation:null},null,2));
+    L.push('');
+  }
+  if(allowed.indexOf('ordering')>=0){
+    L.push('\u25b6 TYPE "ordering" \u2014 Drag steps into the correct sequence');
+    L.push('  \u2022 "correct" lists all items in the RIGHT order (first to last)');
+    L.push('  \u2022 The app shuffles them randomly when presenting to the user');
+    L.push(JSON.stringify({id:5,type:'ordering',stem:'Put the following steps in the correct order.',correct:['First step text','Second step text','Third step text','Fourth step text'],category:'Topic Name',explanation:null},null,2));
+    L.push('');
+  }
+  if(allowed.indexOf('matching')>=0){
+    L.push('\u25b6 TYPE "matching" \u2014 Match each item (left) to its correct description (right)');
+    L.push('  \u2022 "options": the right-hand column values (the pool to match against)');
+    L.push('  \u2022 "pairs": each left-column item with its correct right-column match');
+    L.push(JSON.stringify({id:6,type:'matching',stem:'Match each item on the left to its correct description.',options:['Description of A','Description of B','Description of C','Description of D'],pairs:[{description:'Item A',correct:'Description of A'},{description:'Item B',correct:'Description of B'},{description:'Item C',correct:'Description of C'},{description:'Item D',correct:'Description of D'}],category:'Topic Name',explanation:null},null,2));
+    L.push('');
+  }
+
+  L.push(thr);L.push('PART B \u2014 FILL EXPLANATIONS (run as a separate task)');L.push(thr);
+  L.push('You will receive the questions array with "explanation": null entries.');
+  L.push('Fill every null explanation using the formats shown below.');
+  L.push('Return ONLY valid JSON \u2014 no markdown, no backticks, no preamble.');
+  L.push('Do NOT add, remove, or rename any other keys.');
+  L.push('You may process the whole file or any subset \u2014 even a single question.');
+  L.push('');
+  L.push('EXPLANATION FORMAT BY TYPE:');L.push('');
+
+  if(allowed.indexOf('single')>=0){
+    L.push('\u2500 TYPE "single" \u2500');
+    L.push('"explanation": {\n  "concept": "One or two sentences explaining the core topic.",\n  "A": { "ok": false, "why": "Why A is wrong." },\n  "B": { "ok": false, "why": "Why B is wrong." },\n  "C": { "ok": true,  "why": "Why C is the correct answer." },\n  "D": { "ok": false, "why": "Why D is wrong." }\n}');
+    L.push('\u2022 Include ALL option letters present in the question. "ok": true = correct answer.');L.push('');
+  }
+  if(allowed.indexOf('multi')>=0){
+    L.push('\u2500 TYPE "multi" \u2500');
+    L.push('Same structure as "single" but multiple keys have "ok": true.');
+    L.push('"explanation": {\n  "concept": "What all correct answers have in common.",\n  "A": { "ok": true,  "why": "Why A is correct." },\n  "B": { "ok": false, "why": "Why B is wrong." },\n  "C": { "ok": true,  "why": "Why C is correct." },\n  "D": { "ok": false, "why": "Why D is wrong." }\n}');L.push('');
+  }
+  if(allowed.indexOf('truefalse')>=0){
+    L.push('\u2500 TYPE "truefalse" \u2500');
+    L.push('"explanation": {\n  "concept": "Brief background on the topic the statement covers.",\n  "why": "Explain directly why the statement is True or False, citing the relevant fact."\n}');
+    L.push('Example (answer is True):\n"explanation": {\n  "concept": "Background on this topic.",\n  "why": "TRUE \u2014 [specific fact or evidence that confirms the statement]."\n}');
+    L.push('Example (answer is False):\n"explanation": {\n  "concept": "Background on this topic.",\n  "why": "FALSE \u2014 [the actual correct fact that contradicts the statement]."\n}');L.push('');
+  }
+  if(allowed.indexOf('ordering')>=0){
+    L.push('\u2500 TYPE "ordering" \u2500');
+    L.push('"explanation": {\n  "concept": "Why this sequence matters.",\n  "steps": [\n    { "step": "Exact step text from question", "why": "Why this step comes first." },\n    { "step": "Exact step text from question", "why": "Why this step comes second." },\n    { "step": "Exact step text from question", "why": "Why this step comes third." }\n  ]\n}');
+    L.push('\u26a0 "steps" MUST be inside "explanation". Each "step" value must match the question text exactly.');L.push('');
+  }
+  if(allowed.indexOf('matching')>=0){
+    L.push('\u2500 TYPE "matching" \u2500');
+    L.push('"explanation": {\n  "concept": "Overview of the category being matched.",\n  "explanations": [\n    { "description": "Exact description text from question", "correct": "Matched option", "why": "Why this pairing is correct." },\n    { "description": "Exact description text from question", "correct": "Matched option", "why": "Why this pairing is correct." }\n  ]\n}');
+    L.push('\u26a0 "explanations" MUST be inside "explanation". Each "description" must match the question text exactly.');L.push('');
+  }
+
+  L.push(thr);L.push('COMMON MISTAKES');L.push(thr);
+  L.push('\u2717 { "id":10, "steps":[...], "explanation": null }  \u2190 steps/explanations at root level');
+  L.push('\u2713 { "id":10, "explanation": { "concept":"...", "steps":[...] } }');L.push('');
+  L.push('\u2717 { "description": "description": "Some text" }  \u2190 duplicate key = invalid JSON');
+  L.push('\u2713 { "description": "Some text" }');L.push('');
+  L.push('For large files: process 30\u201350 questions per request and upload each batch separately.');
+  return L.join('\n');
 }
 
 // ── Password Management ───────────────────────────────────────────────────
