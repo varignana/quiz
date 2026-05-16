@@ -1201,53 +1201,161 @@ async function deleteExamSet(setId){
 function openCreateSetModal(){
   var ex=document.getElementById('createSetOv');if(ex)ex.remove();
   var ov=document.createElement('div');ov.className='overlay';ov.id='createSetOv';ov.style.zIndex='100';
-  var modal=document.createElement('div');modal.className='modal';modal.style.cssText='max-width:540px;max-height:85vh;display:flex;flex-direction:column';
-  var selIds={};
-  function rebuild(){
-    var filter=(document.getElementById('setQFilter')||{}).value||'';
-    var fl=filter.toLowerCase();
-    var h='<h2>&#128203; New Custom Set</h2>';
-    h+='<label class="mlabel">Set name</label>';
-    h+='<input class="minput" id="setNameInp" placeholder="e.g. Chapter 1 Practice" value="'+(document.getElementById('setNameInp')?esc(document.getElementById('setNameInp').value):'')+'\">';
-    var selCount=Object.keys(selIds).filter(function(k){return selIds[k];}).length;
-    h+='<div style="font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin:10px 0 6px">Questions <span style="color:var(--acc)">('+selCount+' selected)</span></div>';
-    h+='<input class="minput" id="setQFilter" placeholder="Filter by stem text\u2026" oninput="rebuildSetModal()" style="margin-bottom:8px" value="'+esc(fl)+'">';
-    h+='<div style="overflow-y:auto;flex:1;border:1px solid var(--bdr);border-radius:var(--rs)">';
-    var visible=QS.filter(function(q){return!fl||q.stem.toLowerCase().includes(fl);});
-    if(!visible.length)h+='<div style="padding:12px;font-size:13px;color:var(--muted)">No questions match.</div>';
-    visible.forEach(function(q){
-      var checked=!!selIds[q.id];
-      h+='<div class="set-q-item" onclick="window._setToggle('+q.id+');rebuildSetModal()">';
-      h+='<input type="checkbox"'+(checked?' checked':'')+' onclick="event.stopPropagation();window._setToggle('+q.id+');rebuildSetModal()">';
-      h+='<label>'+badge(q.type)+' <span style="color:var(--muted);font-size:11px">#'+q.id+'</span> '+esc(q.stem.slice(0,90))+(q.stem.length>90?'\u2026':'')+'</label>';
-      h+='</div>';
-    });
-    h+='</div>';
-    h+='<div id="setMsg" style="font-size:12px;min-height:14px;margin-top:8px"></div>';
-    h+='<div style="display:flex;gap:8px;margin-top:8px"><button class="btn-acc" style="flex:1" onclick="saveExamSet()">&#10003; Create Set</button><button class="btn" onclick="document.getElementById(\'createSetOv\').remove()">Cancel</button></div>';
-    modal.innerHTML=h;
+  var modal=document.createElement('div');modal.className='modal';
+  modal.style.cssText='max-width:560px;max-height:86vh;display:flex;flex-direction:column;gap:0;padding:18px';
+  document.body.appendChild(ov);ov.appendChild(modal);
+
+  var selIds={};   // {qid: true}
+  var viewMode='grid';  // 'grid' | 'list'
+  var filterStr='';
+
+  // ── Title ──────────────────────────────────────────────────────────────
+  var titleEl=document.createElement('h2');titleEl.style.marginBottom='10px';titleEl.textContent='Create Custom Set';modal.appendChild(titleEl);
+
+  // ── Name input ─────────────────────────────────────────────────────────
+  var nameLbl=document.createElement('label');nameLbl.className='mlabel';nameLbl.textContent='Set name';modal.appendChild(nameLbl);
+  var nameInp=document.createElement('input');nameInp.className='minput';nameInp.placeholder='e.g. Chapter 1 Practice';nameInp.style.marginBottom='10px';modal.appendChild(nameInp);
+
+  // ── Toolbar ────────────────────────────────────────────────────────────
+  var tb=document.createElement('div');tb.style.cssText='display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:7px';
+
+  var filterInp=document.createElement('input');filterInp.className='minput';
+  filterInp.placeholder='Filter questions\u2026';filterInp.style.cssText='flex:1;min-width:100px;margin-bottom:0';
+  filterInp.oninput=function(){filterStr=this.value;renderList();};
+  tb.appendChild(filterInp);
+
+  var rangeFrom=document.createElement('input');rangeFrom.type='number';rangeFrom.placeholder='From #';
+  rangeFrom.style.cssText='width:68px;border:1px solid var(--bdr2);border-radius:var(--rs);background:var(--surf2);color:var(--text);padding:6px 8px;font-size:13px;font-family:inherit';
+  var rangeTo=document.createElement('input');rangeTo.type='number';rangeTo.placeholder='To #';
+  rangeTo.style.cssText='width:68px;border:1px solid var(--bdr2);border-radius:var(--rs);background:var(--surf2);color:var(--text);padding:6px 8px;font-size:13px;font-family:inherit';
+  tb.appendChild(rangeFrom);tb.appendChild(rangeTo);
+
+  var rangeBtn=document.createElement('button');rangeBtn.className='btn';rangeBtn.style.fontSize='11px';rangeBtn.textContent='Select range';
+  rangeBtn.onclick=function(){
+    var from=parseInt(rangeFrom.value);var to=parseInt(rangeTo.value);
+    if(isNaN(from)&&isNaN(to))return;
+    QS.forEach(function(q){if((!isNaN(from)?q.id>=from:true)&&(!isNaN(to)?q.id<=to:true))selIds[q.id]=true;});
+    updateVisuals();updateCount();
+  };
+  tb.appendChild(rangeBtn);
+
+  var selAllBtn=document.createElement('button');selAllBtn.className='btn';selAllBtn.style.fontSize='11px';selAllBtn.textContent='All visible';
+  selAllBtn.onclick=function(){
+    var fl=filterStr.toLowerCase();
+    var vis=QS.filter(function(q){return!fl||q.stem.toLowerCase().includes(fl)||String(q.id).includes(fl);});
+    var allOn=vis.every(function(q){return selIds[q.id];});
+    vis.forEach(function(q){selIds[q.id]=!allOn;});
+    updateVisuals();updateCount();
+  };
+  tb.appendChild(selAllBtn);
+
+  var clearBtn=document.createElement('button');clearBtn.className='btn';clearBtn.style.fontSize='11px';clearBtn.textContent='Clear all';
+  clearBtn.onclick=function(){selIds={};updateVisuals();updateCount();};
+  tb.appendChild(clearBtn);
+
+  var viewBtn=document.createElement('button');viewBtn.className='btn';viewBtn.style.fontSize='11px';
+  function refreshViewBtn(){viewBtn.textContent=viewMode==='grid'?'\u2261 List':'\u229e Grid';}
+  refreshViewBtn();
+  viewBtn.onclick=function(){viewMode=viewMode==='grid'?'list':'grid';refreshViewBtn();renderList();};
+  tb.appendChild(viewBtn);
+  modal.appendChild(tb);
+
+  // ── Count bar ──────────────────────────────────────────────────────────
+  var countBar=document.createElement('div');countBar.style.cssText='font-size:12px;color:var(--muted);margin-bottom:6px';
+  function updateCount(){
+    var n=Object.keys(selIds).filter(function(k){return selIds[k];}).length;
+    countBar.innerHTML='<span style="color:var(--acc);font-weight:700">'+n+'</span> question'+(n!==1?'s':'')+' selected';
   }
-  window.rebuildSetModal=rebuild;
-  window._setToggle=function(id){selIds[id]=!selIds[id];};
-  window.saveExamSet=async function(){
-    var name=(document.getElementById('setNameInp').value||'').trim();
+  updateCount();modal.appendChild(countBar);
+
+  // ── List container ─────────────────────────────────────────────────────
+  var listWrap=document.createElement('div');
+  listWrap.style.cssText='overflow-y:auto;flex:1;min-height:180px;border:1px solid var(--bdr);border-radius:var(--rs)';
+
+  function toggle(qid){
+    selIds[qid]=!selIds[qid];
+    // Update only the affected element(s)
+    listWrap.querySelectorAll('[data-qid="'+qid+'"]').forEach(function(el){
+      applyVisual(el,!!selIds[qid]);
+    });
+    updateCount();
+  }
+
+  function applyVisual(el,sel){
+    if(el.classList.contains('gsq')){
+      el.style.borderColor=sel?'var(--acc)':'var(--bdr2)';
+      el.style.background=sel?'var(--acc-bg)':'var(--surf2)';
+      el.style.color=sel?'var(--acc)':'var(--text)';
+      el.style.fontWeight=sel?'800':'600';
+    } else {
+      var cb=el.querySelector('input[type=checkbox]');if(cb)cb.checked=sel;
+      el.style.background=sel?'var(--acc-bg)':'';
+    }
+  }
+
+  function updateVisuals(){
+    listWrap.querySelectorAll('[data-qid]').forEach(function(el){
+      applyVisual(el,!!selIds[parseInt(el.dataset.qid)]);
+    });
+  }
+
+  function renderList(){
+    listWrap.innerHTML='';
+    var fl=filterStr.toLowerCase();
+    var vis=QS.filter(function(q){return!fl||q.stem.toLowerCase().includes(fl)||String(q.id).includes(fl);});
+    if(!vis.length){var em=document.createElement('div');em.style.cssText='padding:14px;font-size:13px;color:var(--muted)';em.textContent='No questions match.';listWrap.appendChild(em);return;}
+
+    if(viewMode==='grid'){
+      var grid=document.createElement('div');grid.style.cssText='display:flex;flex-wrap:wrap;gap:5px;padding:10px';
+      vis.forEach(function(q){
+        var sq=document.createElement('div');sq.className='gsq';sq.dataset.qid=q.id;
+        var sel=!!selIds[q.id];
+        sq.style.cssText='width:40px;height:40px;border-radius:var(--rs);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:'+(sel?'800':'600')+';cursor:pointer;user-select:none;border:2px solid '+(sel?'var(--acc)':'var(--bdr2)')+';background:'+(sel?'var(--acc-bg)':'var(--surf2)')+';color:'+(sel?'var(--acc)':'var(--text)');
+        sq.title='#'+q.id+': '+q.stem.slice(0,80);
+        sq.textContent=q.id;
+        sq.onclick=function(){toggle(q.id);};
+        grid.appendChild(sq);
+      });
+      listWrap.appendChild(grid);
+    } else {
+      vis.forEach(function(q){
+        var row=document.createElement('div');row.className='set-q-item';row.dataset.qid=q.id;
+        var sel=!!selIds[q.id];if(sel)row.style.background='var(--acc-bg)';
+        var cb=document.createElement('input');cb.type='checkbox';cb.checked=sel;
+        cb.onchange=function(e){e.stopPropagation();selIds[q.id]=this.checked;applyVisual(row,this.checked);updateCount();};
+        var lbl=document.createElement('label');lbl.style.cssText='font-size:12px;line-height:1.45;cursor:pointer;flex:1;pointer-events:none';
+        lbl.innerHTML=badge(q.type)+' <span style="color:var(--muted);font-size:11px">#'+q.id+'</span> '+esc(q.stem.slice(0,90))+(q.stem.length>90?'\u2026':'');
+        row.onclick=function(e){if(e.target===cb)return;selIds[q.id]=!selIds[q.id];cb.checked=selIds[q.id];applyVisual(row,selIds[q.id]);updateCount();};
+        row.appendChild(cb);row.appendChild(lbl);listWrap.appendChild(row);
+      });
+    }
+  }
+  modal.appendChild(listWrap);
+
+  // ── Footer ─────────────────────────────────────────────────────────────
+  var msgEl=document.createElement('div');msgEl.style.cssText='font-size:12px;min-height:14px;margin-top:8px';modal.appendChild(msgEl);
+  var foot=document.createElement('div');foot.style.cssText='display:flex;gap:8px;margin-top:8px';
+  var saveBtn=document.createElement('button');saveBtn.className='btn-acc';saveBtn.style.flex='1';saveBtn.textContent='\u2713 Create Set';
+  saveBtn.onclick=async function(){
+    var name=(nameInp.value||'').trim();
     var qids=Object.keys(selIds).filter(function(k){return selIds[k];}).map(Number);
-    var msg=document.getElementById('setMsg');
-    if(!name){msg.style.color='var(--err-txt)';msg.textContent='Enter a set name.';return;}
-    if(!qids.length){msg.style.color='var(--err-txt)';msg.textContent='Select at least one question.';return;}
+    if(!name){msgEl.style.color='var(--err-txt)';msgEl.textContent='Enter a set name.';return;}
+    if(!qids.length){msgEl.style.color='var(--err-txt)';msgEl.textContent='Select at least one question.';return;}
     var newSet={id:'set_'+Date.now().toString(36),name:name,qids:qids};
     if(!ACTIVE_EXAM.sets)ACTIVE_EXAM.sets=[];
     ACTIVE_EXAM.sets.push(newSet);
     var idx=examDefs.findIndex(function(e){return e.id===ACTIVE_EXAM.id;});
     if(idx>=0)examDefs[idx].sets=ACTIVE_EXAM.sets;
-    msg.style.color='var(--muted)';msg.textContent='Saving\u2026';
+    msgEl.style.color='var(--muted)';msgEl.textContent='Saving\u2026';
     try{
       await SB.from('quiz_content').upsert([{key:'exam_defs',data:examDefs,updated_at:new Date().toISOString()}]);
-      msg.style.color='var(--ok-txt)';msg.textContent='\u2713 Set created!';
-      setTimeout(function(){document.getElementById('createSetOv').remove();render();},600);
-    }catch(e){msg.style.color='var(--err-txt)';msg.textContent='Save failed: '+e.message;ACTIVE_EXAM.sets.pop();if(idx>=0)examDefs[idx].sets=ACTIVE_EXAM.sets;}
+      msgEl.style.color='var(--ok-txt)';msgEl.textContent='\u2713 Set created!';
+      setTimeout(function(){ov.remove();render();},600);
+    }catch(e){msgEl.style.color='var(--err-txt)';msgEl.textContent='Save failed: '+e.message;ACTIVE_EXAM.sets.pop();if(idx>=0)examDefs[idx].sets=ACTIVE_EXAM.sets;}
   };
-  rebuild();ov.appendChild(modal);document.body.appendChild(ov);
+  var cancelBtn=document.createElement('button');cancelBtn.className='btn';cancelBtn.textContent='Cancel';cancelBtn.onclick=function(){ov.remove();};
+  foot.appendChild(saveBtn);foot.appendChild(cancelBtn);modal.appendChild(foot);
+  renderList();
 }
 
 // ── Multi-Exam Support ────────────────────────────────────────────────────
