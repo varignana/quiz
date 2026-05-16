@@ -223,6 +223,13 @@ input.jmp{border:1px solid var(--bdr2);border-radius:var(--rs);background:var(--
 .tf-btn.tf-ok{border-color:var(--ok);background:var(--ok-bg);color:var(--ok-txt)}
 .tf-btn.tf-wrong{border-color:var(--err);background:var(--err-bg);color:var(--err-txt)}
 .tf-btn.tf-skip{opacity:.45}
+.sw-btn{font-size:11px;padding:3px 8px;border-radius:20px;border:1.5px solid var(--bdr2);background:var(--surf2);color:var(--muted);cursor:pointer;white-space:nowrap;font-weight:600}
+.sw-btn:hover{border-color:var(--acc);color:var(--acc)}
+.set-q-item{display:flex;align-items:flex-start;gap:8px;padding:6px 4px;border-bottom:1px solid var(--bdr);cursor:pointer}
+.set-q-item:hover{background:var(--surf2)}
+.set-q-item label{font-size:12px;line-height:1.45;cursor:pointer;flex:1}
+.set-q-item input[type=checkbox]{width:15px;height:15px;flex-shrink:0;margin-top:2px;accent-color:var(--acc)}
+.set-row{display:flex;align-items:center;gap:8px;padding:9px 12px;background:var(--surf2);border-radius:var(--rs);border:1px solid var(--bdr);margin-bottom:7px}
 .aq-type-btn{padding:6px 14px;border-radius:var(--rs);border:1.5px solid var(--bdr2);background:var(--surf2);color:var(--muted);font-size:13px;font-weight:600;cursor:pointer}
 .aq-type-btn.active{border-color:var(--acc);background:var(--acc);color:#000}
 .aq-option-row{display:flex;align-items:center;gap:6px;margin-bottom:6px}
@@ -263,7 +270,7 @@ input.jmp{border:1px solid var(--bdr2);border-radius:var(--rs);background:var(--
 
 <div class="hdr" id="hdrEl" style="display:none">
   <div class="hdr-top-row">
-    <div style="position:relative"><span class="hdr-logo" id="hdrLogoEl" onclick="toggleExamSwitcher()"><span class="hdr-logo-aws" id="hdrProvTxt">AWS</span><span class="hdr-logo-sub" id="hdrNameTxt">&nbsp;AI Practitioner</span><span id="hdrSwArr" style="display:none;font-size:9px;color:var(--muted);margin-left:3px;vertical-align:middle">&#9660;</span></span><div class="exam-dropdown" id="examDropdown"></div></div>
+    <div style="display:flex;align-items:center;gap:7px"><span class="hdr-logo" id="hdrLogoEl"><span class="hdr-logo-aws" id="hdrProvTxt">AWS</span><span class="hdr-logo-sub" id="hdrNameTxt">&nbsp;AI Practitioner</span></span><button class="sw-btn" id="examSwBtn" onclick="toggleExamSwitcher()" style="display:none">&#9660; Switch</button></div>
     <div class="hdr-right">
       <div class="hdr-sync">
         <span class="sync-dot dot-wait" id="syncDot"></span>
@@ -318,6 +325,10 @@ function hideErr(id){var el=document.getElementById(id);if(el)el.style.display='
 
 // ── Repair questions that may have missing fields from DB ──────────────────
 function repairQuestion(dbQ){
+  // Normalise options: [{key:'A',text:'...'}] → {A:'...'} (AI often exports array format)
+  if(dbQ&&Array.isArray(dbQ.options)&&dbQ.options.length&&dbQ.options[0]&&typeof dbQ.options[0]==='object'&&dbQ.options[0].key!==undefined){
+    var _o={};dbQ.options.forEach(function(x){if(x.key)_o[x.key]=x.text||'';});dbQ.options=_o;
+  }
   var seed=_SEED_QS.find(function(s){return s.id===dbQ.id;});
   if(!seed)return dbQ;
   var r=Object.assign({},dbQ);
@@ -663,7 +674,7 @@ function buildExamQuestions(){
   var pool=QS.filter(function(q){return allowed.indexOf(q.type)>=0;}).sort(function(){return Math.random()-.5;});
   return pool.slice(0,Math.min(exam.totalQ||pool.length,pool.length));
 }
-function startExam(){if(examInterval)clearInterval(examInterval);var qs=buildExamQuestions();var secs=(ACTIVE_EXAM?ACTIVE_EXAM.timeMins:90)*60;S.exam={questions:qs,answers:{},flagged:{},idx:0,startTime:Date.now(),submitted:false,sel:null,matchSel:{},orderItems:null,secs:secs};S.view='exam';render();examInterval=setInterval(tickExamTimer,1000);}
+function startExam(customQids){if(examInterval)clearInterval(examInterval);var qs=customQids?QS.filter(function(q){return customQids.indexOf(q.id)>=0;}).sort(function(){return Math.random()-.5;}):buildExamQuestions();var secs=(ACTIVE_EXAM?ACTIVE_EXAM.timeMins:90)*60;S.exam={questions:qs,answers:{},flagged:{},idx:0,startTime:Date.now(),submitted:false,sel:null,matchSel:{},orderItems:null,secs:secs,setName:customQids?null:null};S.view='exam';render();examInterval=setInterval(tickExamTimer,1000);}
 function tickExamTimer(){if(!S.exam||S.exam.submitted){clearInterval(examInterval);return;}var elapsed=Math.floor((Date.now()-S.exam.startTime)/1000);var rem=Math.max(0,(S.exam.secs||EXAM_SECS)-elapsed);var el=document.getElementById('examTimerEl');if(el){var m=Math.floor(rem/60),s=rem%60;el.textContent=m+':'+(s<10?'0':'')+s;el.className='exam-timer'+(rem<300?' crit':rem<600?' warn':'');}if(rem===0)submitExam(true);}
 function examGoTo(idx){saveExamCurrentAnswer();S.exam.idx=idx;var q=S.exam.questions[idx];S.exam.sel=S.exam.answers[q.id]||null;S.exam.matchSel=S.exam.answers[q.id]?JSON.parse(JSON.stringify(S.exam.answers[q.id])):{};var qi=q.items||q.correct||[];S.exam.orderItems=S.exam.answers[q.id]?S.exam.answers[q.id].slice():(q.type==='ordering'?qi.slice():null);render();}
 function saveExamCurrentAnswer(){if(!S.exam||S.exam.submitted)return;var q=S.exam.questions[S.exam.idx];if(!q)return;if((q.type==='single'||q.type==='multi'||q.type==='truefalse')&&S.exam.sel&&S.exam.sel.length)S.exam.answers[q.id]=S.exam.sel.slice();else if(q.type==='matching'&&Object.keys(S.exam.matchSel).length===q.pairs.length)S.exam.answers[q.id]=JSON.parse(JSON.stringify(S.exam.matchSel));else if(q.type==='ordering'&&S.exam.orderItems)S.exam.answers[q.id]=S.exam.orderItems.slice();}
@@ -971,6 +982,24 @@ function rExamSetup(m){
   if(!QS.length)h+='<div style="font-size:13px;color:var(--muted);padding:4px 0 10px">No questions yet. Add them in Study mode.</div>';
   else h+='<button class="btn-acc" onclick="startExam()">Start Exam &#8594;</button>';
   h+='</div>';
+  // Custom sets section
+  var _sets=(ACTIVE_EXAM&&ACTIVE_EXAM.sets)||[];
+  if(_sets.length||S.adminMode){
+    h+='<div class="h2" style="margin-top:18px">Custom Sets</div>';
+    if(_sets.length){
+      _sets.forEach(function(set){
+        h+='<div class="set-row">';
+        h+='<div style="flex:1"><div style="font-size:13px;font-weight:700">'+esc(set.name)+'</div>';
+        h+='<div style="font-size:11px;color:var(--muted)">'+set.qids.length+' question'+(set.qids.length!==1?'s':'')+'</div></div>';
+        if(S.adminMode)h+='<button class="btn" style="font-size:11px;color:var(--err-txt);border-color:var(--err)" onclick="deleteExamSet(\''+set.id+'\')">&#128465;</button>';
+        h+='<button class="btn-acc" onclick="startExam('+JSON.stringify(set.qids)+')">Start &#8594;</button>';
+        h+='</div>';
+      });
+    } else {
+      h+='<div style="font-size:12px;color:var(--muted);padding:4px 0 8px">No custom sets yet. Create one below.</div>';
+    }
+    if(S.adminMode)h+='<button class="btn btn-pri" style="margin-top:6px" onclick="openCreateSetModal()">&#10010; New Custom Set</button>';
+  }
   if(S.exams&&S.exams.length){h+='<div class="h2" style="margin-top:18px">Past Attempts</div>';var list=S.exams.slice().reverse();list.forEach(function(e,i){var pct=Math.round(e.correct/e.total*100);var sDisp=exam.scoreSystem==='percent'?e.score+'%':e.score;h+='<div class="exam-row '+(e.passed?'exam-row-pass':'exam-row-fail')+'"><span style="font-weight:700">'+(list.length-i)+'. '+e.date+'</span><span style="font-size:13px">'+e.correct+'/'+e.total+' ('+pct+'%)</span><span style="font-size:13px">'+fmtTime(e.elapsed)+' used</span><span style="font-weight:700;font-size:15px;color:'+(e.passed?'var(--ok-txt)':'var(--err-txt)')+'">'+sDisp+' '+(e.passed?'&#10003; PASS':'&#10007; FAIL')+'</span></div>';});}
   m.innerHTML=h;
 }
@@ -1160,6 +1189,67 @@ function saveEdit(qid){
   saveContent().then(function(ok){msg.textContent=ok?'\u2713 Saved!':'\u26a0 Local only';msg.style.color=ok?'var(--ok-txt)':'var(--warn-txt)';render();});
 }
 
+// ── Custom Exam Sets ─────────────────────────────────────────────────────
+async function deleteExamSet(setId){
+  if(!ACTIVE_EXAM||!confirm('Delete this custom set?'))return;
+  ACTIVE_EXAM.sets=(ACTIVE_EXAM.sets||[]).filter(function(s){return s.id!==setId;});
+  var idx=examDefs.findIndex(function(e){return e.id===ACTIVE_EXAM.id;});
+  if(idx>=0)examDefs[idx].sets=ACTIVE_EXAM.sets;
+  try{await SB.from('quiz_content').upsert([{key:'exam_defs',data:examDefs,updated_at:new Date().toISOString()}]);}catch(e){}
+  render();
+}
+function openCreateSetModal(){
+  var ex=document.getElementById('createSetOv');if(ex)ex.remove();
+  var ov=document.createElement('div');ov.className='overlay';ov.id='createSetOv';ov.style.zIndex='100';
+  var modal=document.createElement('div');modal.className='modal';modal.style.cssText='max-width:540px;max-height:85vh;display:flex;flex-direction:column';
+  var selIds={};
+  function rebuild(){
+    var filter=(document.getElementById('setQFilter')||{}).value||'';
+    var fl=filter.toLowerCase();
+    var h='<h2>&#128203; New Custom Set</h2>';
+    h+='<label class="mlabel">Set name</label>';
+    h+='<input class="minput" id="setNameInp" placeholder="e.g. Chapter 1 Practice" value="'+(document.getElementById('setNameInp')?esc(document.getElementById('setNameInp').value):'')+'\">';
+    var selCount=Object.keys(selIds).filter(function(k){return selIds[k];}).length;
+    h+='<div style="font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin:10px 0 6px">Questions <span style="color:var(--acc)">('+selCount+' selected)</span></div>';
+    h+='<input class="minput" id="setQFilter" placeholder="Filter by stem text\u2026" oninput="rebuildSetModal()" style="margin-bottom:8px" value="'+esc(fl)+'">';
+    h+='<div style="overflow-y:auto;flex:1;border:1px solid var(--bdr);border-radius:var(--rs)">';
+    var visible=QS.filter(function(q){return!fl||q.stem.toLowerCase().includes(fl);});
+    if(!visible.length)h+='<div style="padding:12px;font-size:13px;color:var(--muted)">No questions match.</div>';
+    visible.forEach(function(q){
+      var checked=!!selIds[q.id];
+      h+='<div class="set-q-item" onclick="window._setToggle('+q.id+');rebuildSetModal()">';
+      h+='<input type="checkbox"'+(checked?' checked':'')+' onclick="event.stopPropagation();window._setToggle('+q.id+');rebuildSetModal()">';
+      h+='<label>'+badge(q.type)+' <span style="color:var(--muted);font-size:11px">#'+q.id+'</span> '+esc(q.stem.slice(0,90))+(q.stem.length>90?'\u2026':'')+'</label>';
+      h+='</div>';
+    });
+    h+='</div>';
+    h+='<div id="setMsg" style="font-size:12px;min-height:14px;margin-top:8px"></div>';
+    h+='<div style="display:flex;gap:8px;margin-top:8px"><button class="btn-acc" style="flex:1" onclick="saveExamSet()">&#10003; Create Set</button><button class="btn" onclick="document.getElementById(\'createSetOv\').remove()">Cancel</button></div>';
+    modal.innerHTML=h;
+  }
+  window.rebuildSetModal=rebuild;
+  window._setToggle=function(id){selIds[id]=!selIds[id];};
+  window.saveExamSet=async function(){
+    var name=(document.getElementById('setNameInp').value||'').trim();
+    var qids=Object.keys(selIds).filter(function(k){return selIds[k];}).map(Number);
+    var msg=document.getElementById('setMsg');
+    if(!name){msg.style.color='var(--err-txt)';msg.textContent='Enter a set name.';return;}
+    if(!qids.length){msg.style.color='var(--err-txt)';msg.textContent='Select at least one question.';return;}
+    var newSet={id:'set_'+Date.now().toString(36),name:name,qids:qids};
+    if(!ACTIVE_EXAM.sets)ACTIVE_EXAM.sets=[];
+    ACTIVE_EXAM.sets.push(newSet);
+    var idx=examDefs.findIndex(function(e){return e.id===ACTIVE_EXAM.id;});
+    if(idx>=0)examDefs[idx].sets=ACTIVE_EXAM.sets;
+    msg.style.color='var(--muted)';msg.textContent='Saving\u2026';
+    try{
+      await SB.from('quiz_content').upsert([{key:'exam_defs',data:examDefs,updated_at:new Date().toISOString()}]);
+      msg.style.color='var(--ok-txt)';msg.textContent='\u2713 Set created!';
+      setTimeout(function(){document.getElementById('createSetOv').remove();render();},600);
+    }catch(e){msg.style.color='var(--err-txt)';msg.textContent='Save failed: '+e.message;ACTIVE_EXAM.sets.pop();if(idx>=0)examDefs[idx].sets=ACTIVE_EXAM.sets;}
+  };
+  rebuild();ov.appendChild(modal);document.body.appendChild(ov);
+}
+
 // ── Multi-Exam Support ────────────────────────────────────────────────────
 function updateLogoEl(){
   var ae=ACTIVE_EXAM||{provider:'AWS',name:'AI PRACTITIONER'};
@@ -1168,13 +1258,20 @@ function updateLogoEl(){
   if(n)n.textContent='\u00a0'+ae.name;
   document.title='ExamForge — '+ae.provider+' '+ae.name;
   var multi=examDefs.length>1;
-  if(a)a.style.display=multi?'inline':'none';
-  if(l)l.style.cursor=multi?'pointer':'default';
+  if(a)a.style.display='none'; // arrow now replaced by sw-btn
+  var swBtn=document.getElementById('examSwBtn');if(swBtn)swBtn.style.display=multi?'':'none';
 }
 function toggleExamSwitcher(){
   if(examDefs.length<=1)return;
-  var dd=document.getElementById('examDropdown');if(!dd)return;
+  // Move dropdown to body level to avoid header overflow clipping
+  var dd=document.getElementById('examDropdown');
+  if(!dd){dd=document.createElement('div');dd.id='examDropdown';dd.className='exam-dropdown';document.body.appendChild(dd);}
+  else if(dd.parentNode!==document.body){document.body.appendChild(dd);}
+  dd.style.cssText='position:fixed;z-index:9999;min-width:230px;background:var(--surf);border:1px solid var(--bdr2);border-radius:var(--r);box-shadow:0 6px 18px rgba(0,0,0,.22)';
   if(dd.classList.contains('open')){dd.classList.remove('open');return;}
+  // Position under the Switch button
+  var trigger=document.getElementById('examSwBtn')||document.getElementById('hdrLogoEl');
+  if(trigger){var r=trigger.getBoundingClientRect();dd.style.top=(r.bottom+4)+'px';dd.style.left=r.left+'px';}
   var h='';
   examDefs.forEach(function(e){
     var act=ACTIVE_EXAM&&e.id===ACTIVE_EXAM.id;
@@ -1186,7 +1283,7 @@ function toggleExamSwitcher(){
   });
   if(S.adminMode)h+='<div class="edd-add" onclick="openManageExamsModal();document.getElementById(\'examDropdown\').classList.remove(\'open\')">&#10010; Manage Exams</div>';
   dd.innerHTML=h;dd.classList.add('open');
-  setTimeout(function(){document.addEventListener('click',function _cl(ev){if(!dd.contains(ev.target)){dd.classList.remove('open');}document.removeEventListener('click',_cl,true);},true);},20);
+  setTimeout(function(){document.addEventListener('click',function _cl(ev){if(!dd.contains(ev.target)&&ev.target.id!=='examSwBtn'){dd.classList.remove('open');}document.removeEventListener('click',_cl,true);},true);},20);
 }
 async function switchExam(examId){
   if(ACTIVE_EXAM&&ACTIVE_EXAM.id===examId)return;
@@ -1352,12 +1449,12 @@ function buildAIPrompt(exam){
 
   if(allowed.indexOf('single')>=0){
     L.push('\u25b6 TYPE "single" \u2014 One correct answer from 4 options');
-    L.push(JSON.stringify({id:1,type:'single',stem:'Which of the following best describes [concept]?',options:[{key:'A',text:'First option'},{key:'B',text:'Second option'},{key:'C',text:'Correct option'},{key:'D',text:'Fourth option'}],correct:['C'],category:'Topic Name',explanation:null},null,2));
+    L.push(JSON.stringify({id:1,type:'single',stem:'Which of the following best describes [concept]?',options:{A:'First option',B:'Second option',C:'Correct option — replace all four with real answer choices',D:'Fourth option'},correct:['C'],category:'Topic Name',explanation:null},null,2));
     L.push('');
   }
   if(allowed.indexOf('multi')>=0){
     L.push('\u25b6 TYPE "multi" \u2014 Choose ALL correct answers (stem must say "Which TWO\u2026" or "Select all that apply\u2026")');
-    L.push(JSON.stringify({id:2,type:'multi',stem:'Which TWO of the following are examples of [concept]?',options:[{key:'A',text:'Correct option A'},{key:'B',text:'Wrong option'},{key:'C',text:'Correct option C'},{key:'D',text:'Wrong option'}],correct:['A','C'],category:'Topic Name',explanation:null},null,2));
+    L.push(JSON.stringify({id:2,type:'multi',stem:'Which TWO of the following are examples of [concept]?',options:{A:'Correct option A',B:'Wrong option',C:'Correct option C',D:'Wrong option'},correct:['A','C'],category:'Topic Name',explanation:null},null,2));
     L.push('');
   }
   if(allowed.indexOf('truefalse')>=0){
