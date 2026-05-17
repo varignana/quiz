@@ -1202,6 +1202,7 @@ function openEditModal(qid){
   overlay.onclick=function(e){if(e.target===overlay)overlay.remove();};
   var modal=document.createElement('div');modal.className='modal';modal.style.maxWidth='640px';
   var editQ=JSON.parse(JSON.stringify(q)); // deep copy to edit
+  var editExp=JSON.parse(JSON.stringify(S.explanations[qid]||S.cache[qid]||{})); // deep copy of explanation
   var msgEl=null;
 
   function rebuild(){
@@ -1299,16 +1300,96 @@ function openEditModal(qid){
       addPair.onclick=function(){pairs.push({description:'',correct:''});rebuild();};
       modal.appendChild(addPair);
     }
+    // ── Explanation section ─────────────────────────────────────────────────
+    var expWrap=document.createElement('div');expWrap.style.cssText='margin-top:16px;padding-top:14px;border-top:2px solid var(--bdr)';
+    var expHdr=document.createElement('div');expHdr.style.cssText='font-size:13px;font-weight:700;margin-bottom:10px';expHdr.innerHTML='&#128218; Explanation <span style="font-size:11px;font-weight:400;color:var(--muted)">(shown to user after answering)</span>';expWrap.appendChild(expHdr);
+    // Concept (all types)
+    var conLbl=document.createElement('div');conLbl.style.cssText='font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin-bottom:3px';conLbl.textContent='Key Concept';expWrap.appendChild(conLbl);
+    var conTa=document.createElement('textarea');conTa.rows=2;conTa.style.cssText='width:100%;border:1px solid var(--bdr2);border-radius:var(--rs);background:var(--surf2);color:var(--text);padding:8px;font-size:13px;font-family:inherit;resize:vertical;margin-bottom:12px;box-sizing:border-box';
+    conTa.placeholder='Brief explanation of the topic covered by this question.';
+    conTa.value=editExp.concept||'';conTa.oninput=function(){editExp.concept=this.value;};expWrap.appendChild(conTa);
+    // Single / Multi: per-option why
+    if(editQ.type==='single'||editQ.type==='multi'){
+      var opts2=editQ.options&&typeof editQ.options==='object'&&!Array.isArray(editQ.options)?editQ.options:{};
+      var whyHdr=document.createElement('div');whyHdr.style.cssText='font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px';whyHdr.textContent='Per-option explanation';expWrap.appendChild(whyHdr);
+      Object.keys(opts2).sort().forEach(function(k){
+        var isOk=(editQ.correct||[]).indexOf(k)>=0;
+        if(!editExp[k]||typeof editExp[k]!=='object')editExp[k]={ok:isOk,why:''};
+        editExp[k].ok=isOk; // always sync ok from correct[]
+        var rowEl=document.createElement('div');rowEl.style.cssText='display:flex;gap:8px;align-items:flex-start;margin-bottom:8px';
+        var badge2=document.createElement('div');badge2.style.cssText='min-width:30px;padding-top:7px;font-size:12px;font-weight:700;color:'+(isOk?'var(--ok-txt)':'var(--err-txt)');badge2.textContent=(isOk?'\u2713 ':'\u2717 ')+k;
+        var optPreview=document.createElement('div');optPreview.style.cssText='flex:1;display:flex;flex-direction:column;gap:3px';
+        var optLblEl=document.createElement('div');optLblEl.style.cssText='font-size:11px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap';optLblEl.title=opts2[k];optLblEl.textContent=(opts2[k]||'').slice(0,60)+((opts2[k]||'').length>60?'\u2026':'');
+        var whyTa=document.createElement('textarea');whyTa.rows=2;whyTa.style.cssText='width:100%;border:1px solid var(--bdr2);border-radius:var(--rs);background:var(--surf2);color:var(--text);padding:6px 8px;font-size:12px;font-family:inherit;resize:vertical;box-sizing:border-box';
+        whyTa.placeholder='Why option '+k+' is '+(isOk?'correct\u2026':'wrong\u2026');
+        whyTa.value=editExp[k].why||'';
+        (function(key){whyTa.oninput=function(){editExp[key].why=this.value;};})(k);
+        optPreview.appendChild(optLblEl);optPreview.appendChild(whyTa);rowEl.appendChild(badge2);rowEl.appendChild(optPreview);expWrap.appendChild(rowEl);
+      });
+    }
+    // True / False: single why
+    if(editQ.type==='truefalse'){
+      var tfWhyLbl=document.createElement('div');tfWhyLbl.style.cssText='font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin-bottom:3px';tfWhyLbl.textContent='Why (True or False explanation)';expWrap.appendChild(tfWhyLbl);
+      var tfWhyNote=document.createElement('div');tfWhyNote.style.cssText='font-size:11px;color:var(--muted);margin-bottom:4px';tfWhyNote.textContent='Correct answer: '+(editQ.correct&&editQ.correct[0]||'?');expWrap.appendChild(tfWhyNote);
+      var tfWhyTa=document.createElement('textarea');tfWhyTa.rows=3;tfWhyTa.style.cssText='width:100%;border:1px solid var(--bdr2);border-radius:var(--rs);background:var(--surf2);color:var(--text);padding:8px;font-size:13px;font-family:inherit;resize:vertical;margin-bottom:10px;box-sizing:border-box';
+      tfWhyTa.placeholder='TRUE/FALSE \u2014 explain the key fact that makes this statement true or false.';
+      tfWhyTa.value=editExp.why||'';tfWhyTa.oninput=function(){editExp.why=this.value;};expWrap.appendChild(tfWhyTa);
+    }
+    // Ordering: per-step why
+    if(editQ.type==='ordering'){
+      var ordSteps=editQ.correct||[];
+      if(!Array.isArray(editExp.steps)||editExp.steps.length!==ordSteps.length){
+        var prevSteps=Array.isArray(editExp.steps)?editExp.steps:[];
+        editExp.steps=ordSteps.map(function(s,i){return{step:s,why:(prevSteps[i]&&prevSteps[i].why)||''};});
+      } else {
+        editExp.steps=ordSteps.map(function(s,i){return{step:s,why:(editExp.steps[i]&&editExp.steps[i].why)||''};});
+      }
+      var stHdr=document.createElement('div');stHdr.style.cssText='font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px';stHdr.textContent='Why each step comes in this position';expWrap.appendChild(stHdr);
+      ordSteps.forEach(function(stepText,i){
+        var rowEl=document.createElement('div');rowEl.style.cssText='display:flex;gap:8px;align-items:flex-start;margin-bottom:8px';
+        var numEl=document.createElement('div');numEl.style.cssText='min-width:22px;padding-top:7px;font-size:12px;font-weight:700;color:var(--muted);text-align:right';numEl.textContent=(i+1)+'.';
+        var colEl=document.createElement('div');colEl.style.flex='1';
+        var stLbl=document.createElement('div');stLbl.style.cssText='font-size:11px;color:var(--muted);margin-bottom:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap';stLbl.title=stepText;stLbl.textContent=stepText.slice(0,65)+(stepText.length>65?'\u2026':'');
+        var stTa=document.createElement('textarea');stTa.rows=2;stTa.style.cssText='width:100%;border:1px solid var(--bdr2);border-radius:var(--rs);background:var(--surf2);color:var(--text);padding:6px 8px;font-size:12px;font-family:inherit;resize:vertical;box-sizing:border-box';
+        stTa.placeholder='Why this comes at position '+(i+1)+'\u2026';
+        stTa.value=(editExp.steps[i]&&editExp.steps[i].why)||'';
+        (function(idx){stTa.oninput=function(){editExp.steps[idx].why=this.value;};})(i);
+        colEl.appendChild(stLbl);colEl.appendChild(stTa);rowEl.appendChild(numEl);rowEl.appendChild(colEl);expWrap.appendChild(rowEl);
+      });
+    }
+    // Matching: per-pair why
+    if(editQ.type==='matching'){
+      var mpairs=editQ.pairs||[];
+      if(!Array.isArray(editExp.explanations)||editExp.explanations.length!==mpairs.length){
+        var prevExp2=Array.isArray(editExp.explanations)?editExp.explanations:[];
+        editExp.explanations=mpairs.map(function(p,i){return{description:p.description,correct:p.correct,why:(prevExp2[i]&&prevExp2[i].why)||''};});
+      } else {
+        editExp.explanations=mpairs.map(function(p,i){return{description:p.description,correct:p.correct,why:editExp.explanations[i].why||''};});
+      }
+      var mpHdr=document.createElement('div');mpHdr.style.cssText='font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px';mpHdr.textContent='Why each pair matches';expWrap.appendChild(mpHdr);
+      mpairs.forEach(function(pair,i){
+        var rowEl=document.createElement('div');rowEl.style.cssText='display:flex;gap:8px;align-items:flex-start;margin-bottom:8px';
+        var numEl=document.createElement('div');numEl.style.cssText='min-width:22px;padding-top:7px;font-size:12px;font-weight:700;color:var(--muted);text-align:right';numEl.textContent=(i+1)+'.';
+        var colEl=document.createElement('div');colEl.style.flex='1';
+        var pLbl=document.createElement('div');pLbl.style.cssText='font-size:11px;color:var(--muted);margin-bottom:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap';pLbl.textContent=(pair.description||'').slice(0,40)+' \u2192 '+(pair.correct||'').slice(0,30);
+        var mpTa=document.createElement('textarea');mpTa.rows=2;mpTa.style.cssText='width:100%;border:1px solid var(--bdr2);border-radius:var(--rs);background:var(--surf2);color:var(--text);padding:6px 8px;font-size:12px;font-family:inherit;resize:vertical;box-sizing:border-box';
+        mpTa.placeholder='Why this description matches this option\u2026';
+        mpTa.value=(editExp.explanations[i]&&editExp.explanations[i].why)||'';
+        (function(idx){mpTa.oninput=function(){editExp.explanations[idx].why=this.value;};})(i);
+        colEl.appendChild(pLbl);colEl.appendChild(mpTa);rowEl.appendChild(numEl);rowEl.appendChild(colEl);expWrap.appendChild(rowEl);
+      });
+    }
+    modal.appendChild(expWrap);
     // Message + Save
     msgEl=document.createElement('div');msgEl.style.cssText='font-size:13px;min-height:16px;margin-bottom:8px';modal.appendChild(msgEl);
     var saveBtn=document.createElement('button');saveBtn.className='btn-acc';saveBtn.style.width='100%';saveBtn.innerHTML='&#10003; Save Changes';
-    saveBtn.onclick=function(){saveEditFull(qid,editQ,msgEl,overlay);};
+    saveBtn.onclick=function(){saveEditFull(qid,editQ,editExp,msgEl,overlay);};
     modal.appendChild(saveBtn);
   }
   overlay.appendChild(modal);document.body.appendChild(overlay);
   rebuild();
 }
-function saveEditFull(qid,editQ,msgEl,overlay){
+function saveEditFull(qid,editQ,editExp,msgEl,overlay){
   if(!(editQ.stem||'').trim()){msgEl.style.color='var(--err-txt)';msgEl.textContent='Stem cannot be empty';return;}
   if((editQ.type==='single'||editQ.type==='multi')&&(!editQ.correct||!editQ.correct.length)){msgEl.style.color='var(--err-txt)';msgEl.textContent='Enter at least one correct answer';return;}
   if(editQ.type==='truefalse'&&(!editQ.correct||!editQ.correct.length)){msgEl.style.color='var(--err-txt)';msgEl.textContent='Select True or False';return;}
@@ -1319,6 +1400,14 @@ function saveEditFull(qid,editQ,msgEl,overlay){
   delete q.options;delete q.pairs;delete q.items;
   Object.assign(q,JSON.parse(JSON.stringify(editQ)));
   S.corrections=S.corrections||{};S.corrections[qid]=JSON.parse(JSON.stringify(editQ));
+  // Save explanation
+  if(editExp&&Object.keys(editExp).length){
+    if(editQ.type==='single'||editQ.type==='multi'){
+      Object.keys(editExp).forEach(function(k){if(editExp[k]&&typeof editExp[k]==='object'&&editExp[k].ok!==undefined){editExp[k].ok=(editQ.correct||[]).indexOf(k)>=0;}});
+    }
+    S.explanations[qid]=editExp;
+    S.cache[qid]=editExp;
+  }
   msgEl.style.color='var(--muted)';msgEl.textContent='Saving\u2026';
   saveContent().then(function(ok){
     if(msgEl)msgEl.textContent=ok?'\u2713 Saved!':'\u26a0 Local only — sync when online';
