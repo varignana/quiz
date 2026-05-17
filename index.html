@@ -1006,7 +1006,7 @@ function rExamSetup(m){
         h+='<div style="flex:1"><div style="font-size:13px;font-weight:700">'+esc(set.name)+'</div>';
         h+='<div style="font-size:11px;color:var(--muted)">'+set.qids.length+' question'+(set.qids.length!==1?'s':'')+'</div></div>';
         if(S.adminMode)h+='<button class="btn" style="font-size:11px;color:var(--err-txt);border-color:var(--err)" onclick="deleteExamSet(\''+set.id+'\')">&#128465;</button>';
-        h+='<button class="btn-acc" onclick="_startSet(\'' + set.id + \'\');">Start &#8594;</button>';
+        h+='<button class="btn-acc" onclick="_startSet(\'' + set.id + '\');">Start &#8594;</button>';
         h+='</div>';
       });
     } else {
