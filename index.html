@@ -1107,7 +1107,7 @@ function rSync(m){
     var qStatus=document.createElement('div');qStatus.style.cssText='background:var(--surf2);border-radius:var(--rs);padding:10px 13px;margin-bottom:14px;font-size:13px;display:flex;flex-direction:column;gap:4px';
     qStatus.innerHTML='<span><strong>&#128218; Questions in DB:</strong> '+QS.length+'</span>'+(filled>0?'<span style="color:var(--ok-txt)">&#9989; '+filled+'/'+QS.length+' explanations loaded</span>':'<span style="color:var(--muted)">\u26a0\ufe0f No offline explanations</span>');
     adminCard.appendChild(qStatus);
-    var btnRow=document.createElement('div');btnRow.style.cssText='display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px';var dlBtn=document.createElement('button');dlBtn.className='btn';dlBtn.innerHTML='\u2b07 Download JSON';dlBtn.onclick=exportJSON;var ulBtn=document.createElement('button');ulBtn.className='btn btn-pri';ulBtn.innerHTML='\u2b06 Upload JSON';ulBtn.onclick=triggerImport;btnRow.appendChild(dlBtn);btnRow.appendChild(ulBtn);adminCard.appendChild(btnRow);
+    var btnRow=document.createElement('div');btnRow.style.cssText='display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px';var dlBtn=document.createElement('button');dlBtn.className='btn';dlBtn.innerHTML='\u2b07 Download JSON';dlBtn.onclick=exportJSON;var ulBtn=document.createElement('button');ulBtn.className='btn btn-pri';ulBtn.innerHTML='\u2b06 Upload JSON';ulBtn.onclick=triggerImport;var pasteBtn=document.createElement('button');pasteBtn.className='btn';pasteBtn.innerHTML='\u{1F4CB} Paste JSON';pasteBtn.onclick=openPasteModal;btnRow.appendChild(dlBtn);btnRow.appendChild(ulBtn);btnRow.appendChild(pasteBtn);adminCard.appendChild(btnRow);
     var fileInput=document.createElement('input');fileInput.type='file';fileInput.accept='.json';fileInput.style.display='none';fileInput.id='importFileInput';fileInput.onchange=function(){handleImportFile(this);};adminCard.appendChild(fileInput);
     var importMsg=document.createElement('div');importMsg.id='importMsg';importMsg.style.cssText='font-size:13px;min-height:16px;margin-bottom:12px';adminCard.appendChild(importMsg);
     var IMPORT_PROMPT=buildAIPrompt(ACTIVE_EXAM);
@@ -1161,40 +1161,82 @@ function normaliseExpl(q){
   return null;
 }
 
+function processImportJSON(text, msgEl){
+  try{
+    var raw;
+    try{raw=JSON.parse(text);}catch(je){var m=je.message.match(/position (\d+)/);var hint=m?' near char '+m[1]+' \u2014 paste into jsonlint.com to find the exact line':'';throw new Error('Invalid JSON'+hint+'. Parser: '+je.message);}
+    var questions=Array.isArray(raw)?raw:(raw.questions||[]);
+    if(!questions.length)throw new Error('No questions array found. Must be [] or {"questions":[...]}');
+    var expLoaded=0,qAdded=0,qUpdated=0,rescued=0,skipped=0,errs=[];
+    var existingIds=new Set(QS.map(function(q){return q.id;}));
+    questions.forEach(function(q){
+      if(!q||typeof q!=='object'){errs.push('non-object entry');return;}
+      var qid=parseInt(q.id);if(!qid){errs.push('entry missing numeric id');return;}
+      var expl=normaliseExpl(q);
+      if(expl){var wasRescued=!(q.explanation&&typeof q.explanation==='object'&&Object.keys(q.explanation).length>0);S.explanations[qid]=expl;S.cache[qid]=expl;expLoaded++;if(wasRescued)rescued++;}
+      if(q.stem&&q.type){var err=validateQuestion(q);if(err){errs.push('Q'+qid+': '+err);return;}var cleanQ=buildCleanQ(q);if(existingIds.has(qid)){var idx=QS.findIndex(function(qq){return qq.id===qid;});if(idx>=0){QS[idx]=cleanQ;qUpdated++;}}else{QS.push(cleanQ);existingIds.add(qid);qAdded++;}}else if(!expl){skipped++;}
+    });
+    QS.sort(function(a,b){return a.id-b.id;});
+    var parts=[];
+    if(expLoaded)parts.push(expLoaded+' explanation'+(expLoaded>1?'s':'')+' loaded'+(rescued?' ('+rescued+' auto-corrected)':''));
+    if(qAdded)parts.push(qAdded+' question'+(qAdded>1?'s':'')+' added');
+    if(qUpdated)parts.push(qUpdated+' question'+(qUpdated>1?'s':'')+' updated');
+    if(skipped)parts.push(skipped+' item'+(skipped>1?'s':'')+' skipped');
+    if(!parts.length)throw new Error('Nothing imported. Each entry needs {id, explanation} or {id, stem, type, ...}.');
+    if(errs.length)parts.push('\u26a0 '+errs.length+' error'+(errs.length>1?'s':'')+': '+errs.slice(0,4).join(' | ')+(errs.length>4?'\u2026':''));
+    if(msgEl){msgEl.style.color='var(--ok-txt)';msgEl.textContent='Saving\u2026';}
+    saveContent().then(function(ok){if(msgEl){msgEl.style.color=ok?'var(--ok-txt)':'var(--warn-txt)';msgEl.textContent=(ok?'\u2713 ':'\u26a0 Local only \u2014 ')+parts.join(', ')+'.';}render();});
+  }catch(e){if(msgEl){msgEl.style.color='var(--err-txt)';msgEl.textContent='\u2717 '+e.message;}}
+}
 function handleImportFile(input){
   var file=input.files[0];if(!file)return;
+  var msgEl=document.getElementById('importMsg');
   var reader=new FileReader();
-  reader.onload=function(ev){
-    var msgEl=document.getElementById('importMsg');
-    try{
-      var raw;
-      try{raw=JSON.parse(ev.target.result);}catch(je){var m=je.message.match(/position (\d+)/);var hint=m?' near char '+m[1]+' \u2014 paste into jsonlint.com to find the exact line':'';throw new Error('Invalid JSON'+hint+'. Parser: '+je.message);}
-      var questions=Array.isArray(raw)?raw:(raw.questions||[]);
-      if(!questions.length)throw new Error('No questions array found. File must be [] or {"questions":[]}');
-      var expLoaded=0,qAdded=0,qUpdated=0,rescued=0,skipped=0,errors=[];
-      var existingIds=new Set(QS.map(function(q){return q.id;}));
-      questions.forEach(function(q){
-        if(!q||typeof q!=='object'){errors.push('non-object entry');return;}
-        var qid=parseInt(q.id);if(!qid){errors.push('entry missing numeric id');return;}
-        var expl=normaliseExpl(q);
-        if(expl){var wasRescued=!(q.explanation&&typeof q.explanation==='object'&&Object.keys(q.explanation).length>0);S.explanations[qid]=expl;S.cache[qid]=expl;expLoaded++;if(wasRescued)rescued++;}
-        if(q.stem&&q.type){var err=validateQuestion(q);if(err){errors.push('Q'+qid+': '+err);return;}var cleanQ=buildCleanQ(q);if(existingIds.has(qid)){var idx=QS.findIndex(function(qq){return qq.id===qid;});if(idx>=0){QS[idx]=cleanQ;qUpdated++;}}else{QS.push(cleanQ);existingIds.add(qid);qAdded++;}}else if(!expl){skipped++;}
-      });
-      QS.sort(function(a,b){return a.id-b.id;});
-      var parts=[];
-      if(expLoaded)parts.push(expLoaded+' explanation'+(expLoaded>1?'s':'')+' loaded'+(rescued?' ('+rescued+' auto-corrected)':''));
-      if(qAdded)parts.push(qAdded+' question'+(qAdded>1?'s':'')+' added');
-      if(qUpdated)parts.push(qUpdated+' question'+(qUpdated>1?'s':'')+' updated');
-      if(skipped)parts.push(skipped+' item'+(skipped>1?'s':'')+' skipped');
-      if(!parts.length)throw new Error('Nothing imported. Each entry needs {id, explanation} or {id, stem, type, ...}.');
-      if(errors.length)parts.push('\u26a0 '+errors.length+' error'+(errors.length>1?'s':'')+': '+errors.slice(0,4).join(' | ')+(errors.length>4?'\u2026':''));
-      if(msgEl){msgEl.style.color='var(--ok-txt)';msgEl.textContent='Saving\u2026';}
-      saveContent().then(function(ok){if(msgEl){msgEl.style.color=ok?'var(--ok-txt)':'var(--warn-txt)';msgEl.textContent=(ok?'\u2713 ':'\u26a0 Local only \u2014 ')+parts.join(', ')+'.';}render();});
-    }catch(e){if(msgEl){msgEl.style.color='var(--err-txt)';msgEl.textContent='\u2717 '+e.message;}}
-    input.value='';
-  };
-  reader.onerror=function(){var el=document.getElementById('importMsg');if(el){el.style.color='var(--err-txt)';el.textContent='\u2717 Could not read file';}};
+  reader.onload=function(ev){processImportJSON(ev.target.result,msgEl);input.value='';};
+  reader.onerror=function(){if(msgEl){msgEl.style.color='var(--err-txt)';msgEl.textContent='\u2717 Could not read file';}};
   reader.readAsText(file);
+}
+function openPasteModal(){
+  var ex=document.getElementById('pasteJsonOv');if(ex)ex.remove();
+  var ov=document.createElement('div');ov.className='overlay';ov.id='pasteJsonOv';ov.style.zIndex='100';
+  ov.onclick=function(e){if(e.target===ov)ov.remove();};
+  var modal=document.createElement('div');modal.className='modal';modal.style.maxWidth='640px';
+  var h=document.createElement('h2');h.textContent='Paste JSON';modal.appendChild(h);
+  var hint=document.createElement('p');hint.style.cssText='font-size:12px;color:var(--muted);margin-bottom:10px;line-height:1.5';
+  hint.textContent='Paste any valid JSON — a full export file ({questions:[...]}) or just an array ([...]) of question/explanation objects. New questions are added, existing IDs are updated, explanations are merged.';
+  modal.appendChild(hint);
+  var ta=document.createElement('textarea');
+  ta.style.cssText='width:100%;height:320px;border:1px solid var(--bdr2);border-radius:var(--rs);background:var(--surf2);color:var(--text);padding:10px;font-size:12px;font-family:monospace;resize:vertical;box-sizing:border-box;margin-bottom:10px';
+  ta.placeholder='[\n  {\n    "id": 1,\n    "type": "single",\n    "stem": "...",\n    ...\n  }\n]';
+  modal.appendChild(ta);
+  var msgEl=document.createElement('div');msgEl.style.cssText='font-size:13px;min-height:18px;margin-bottom:10px;line-height:1.4';modal.appendChild(msgEl);
+  var btnRow=document.createElement('div');btnRow.style.cssText='display:flex;gap:8px';
+  var importBtn=document.createElement('button');importBtn.className='btn-acc';importBtn.style.flex='1';importBtn.textContent='Import JSON';
+  importBtn.onclick=function(){
+    var text=(ta.value||'').trim();
+    if(!text){msgEl.style.color='var(--err-txt)';msgEl.textContent='\u2717 Nothing pasted yet.';return;}
+    importBtn.disabled=true;importBtn.textContent='Importing\u2026';
+    // Wrap processImportJSON so we can re-enable the button and close on success
+    var origSave=window._importSaveDone;
+    processImportJSON(text,msgEl);
+    // Watch msgEl for completion
+    var t0=Date.now();
+    var watcher=setInterval(function(){
+      if(Date.now()-t0>15000){clearInterval(watcher);importBtn.disabled=false;importBtn.textContent='Import JSON';return;}
+      var txt=msgEl.textContent||'';
+      if(txt.startsWith('\u2713')||txt.startsWith('\u26a0 Local')){
+        clearInterval(watcher);
+        importBtn.disabled=false;importBtn.textContent='Import JSON';
+        if(txt.startsWith('\u2713'))setTimeout(function(){ov.remove();},1200);
+      } else if(txt.startsWith('\u2717')){
+        clearInterval(watcher);importBtn.disabled=false;importBtn.textContent='Import JSON';
+      }
+    },200);
+  };
+  var closeBtn=document.createElement('button');closeBtn.className='btn';closeBtn.textContent='Close';closeBtn.onclick=function(){ov.remove();};
+  btnRow.appendChild(importBtn);btnRow.appendChild(closeBtn);modal.appendChild(btnRow);
+  ov.appendChild(modal);document.body.appendChild(ov);
+  setTimeout(function(){ta.focus();},100);
 }
 
 // ── Admin ─────────────────────────────────────────────────────────────────
