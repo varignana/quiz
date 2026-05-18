@@ -937,6 +937,12 @@ function renderExplContent(q,expl){
         h+='<div class="xrow"><div class="xico" style="color:var(--acc);font-weight:700">'+(i+1)+'</div><div class="xtxt"><strong>'+esc(item)+'</strong></div></div>';
       });
     }
+  }else if(q.type==='truefalse'){
+    // Show the why explanation for true/false questions
+    var ans=q.correct&&q.correct[0]||'?';
+    if(expl.why){
+      h+='<div class="xrow"><div class="xico">&#9989;</div><div class="xtxt bok"><strong>'+esc(ans)+'</strong><br>'+esc(expl.why)+'</div></div>';
+    }
   }
   return h;
 }
@@ -1151,6 +1157,7 @@ function normaliseExpl(q){
   if((q.type==='ordering')&&Array.isArray(q.steps)&&q.steps.length)return{concept:q.concept||'',steps:q.steps};
   if((q.type==='matching')&&Array.isArray(q.explanations)&&q.explanations.length)return{concept:q.concept||'',explanations:q.explanations};
   if((q.type==='single'||q.type==='multi')&&q.concept){var expl={concept:q.concept},anyOpt=false;'ABCDE'.split('').forEach(function(k){if(q[k]&&typeof q[k]==='object'){expl[k]=q[k];anyOpt=true;}});if(anyOpt)return expl;}
+  if(q.type==='truefalse'&&(q.concept||q.why))return{concept:q.concept||'',why:q.why||''};
   return null;
 }
 
