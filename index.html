@@ -164,6 +164,7 @@ input.jmp{border:1px solid var(--bdr2);border-radius:var(--rs);background:var(--
 
 /* ── AUTH ── */
 .overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:100;display:flex;align-items:center;justify-content:center;padding:16px;overflow-y:auto}
+@media(max-width:600px){#adminModal,#createSetOv{align-items:flex-start;padding:70px 8px 30px;overflow-y:scroll;-webkit-overflow-scrolling:touch}#adminModal .modal,#createSetOv .modal{max-height:none!important;overflow-y:visible!important;border-radius:12px;padding:16px 14px;width:100%;box-sizing:border-box}}
 .modal{background:var(--surf);border-radius:var(--r);padding:22px;max-width:380px;width:100%;border:1px solid var(--bdr2)}
 .modal h2{font-size:16px;font-weight:700;margin-bottom:5px}
 .minfo{font-size:13px;color:var(--muted);margin-bottom:14px;line-height:1.6}
@@ -442,7 +443,9 @@ async function load(){
     setSS(true,'synced \u2713');
   }catch(e){console.warn('progress load:',e);setSS(false,'offline');}
   // ── 3. Active exam + content ──────────────────────────────────────────────
-  ACTIVE_EXAM=examDefs[0];
+  var _lastId=progressData.lastExamId;
+  var _lastExam=_lastId?examDefs.find(function(e){return e.id===_lastId;}):null;
+  ACTIVE_EXAM=_lastExam||examDefs[0];
   var ep=progressData.perExam&&progressData.perExam[ACTIVE_EXAM.id];
   if(ep){S.tries=ep.tries||[];S.activeTry=ep.activeTry||1;S.exams=ep.examAttempts||[];}
   await loadExamContent(ACTIVE_EXAM.id);
@@ -473,6 +476,7 @@ async function dbsave(){
   if(!SB||!USERID||IS_GUEST)return;
   try{
     if(!progressData.perExam)progressData.perExam={};
+    progressData.lastExamId=ACTIVE_EXAM?ACTIVE_EXAM.id:'default';
     var eid=ACTIVE_EXAM?ACTIVE_EXAM.id:'default';
     progressData.perExam[eid]={tries:S.tries,activeTry:S.activeTry,examAttempts:S.exams};
     var r=await SB.from('quiz_progress').upsert({user_id:USERID,data:progressData,updated_at:new Date().toISOString()});
