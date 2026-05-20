@@ -409,7 +409,7 @@ async function doAuth(){
 
 async function signOut(){
   if(examInterval)clearInterval(examInterval);
-  await SB.auth.signOut();USERID=null;USERNAME=null;S=mkS();examDefs=[];ACTIVE_EXAM=null;progressData={};
+  try{localStorage.removeItem('quiz_admin_'+(USERID||''));}catch(e){}await SB.auth.signOut();USERID=null;USERNAME=null;S=mkS();examDefs=[];ACTIVE_EXAM=null;progressData={};
   document.getElementById('hdrEl').style.display='none';document.getElementById('authOverlay').style.display='';
   AUTH_MODE='signin';
   document.getElementById('authDesc').textContent='Sign in with your username and password.';
@@ -418,7 +418,7 @@ async function signOut(){
   document.getElementById('authUser').value=localStorage.getItem('quiz_username')||'';document.getElementById('authPwd').value='';
 }
 
-async function startApp(){setSS(false,'loading\u2026');await load();S.loaded=true;if(!ACTIVE_EXAM)ACTIVE_EXAM=examDefs[0];updateLogoEl();var td=getTD();S.idx=0;for(var i=0;i<QS.length;i++){if(!td.answers[QS[i].id]){S.idx=i;break;}}updTryBtn();render();}
+async function startApp(){setSS(false,'loading\u2026');await load();S.loaded=true;if(!ACTIVE_EXAM)ACTIVE_EXAM=examDefs[0];updateLogoEl();try{if(USERID&&localStorage.getItem('quiz_admin_'+USERID)==='1')S.adminMode=true;}catch(e){}var td=getTD();S.idx=0;for(var i=0;i<QS.length;i++){if(!td.answers[QS[i].id]){S.idx=i;break;}}updTryBtn();render();}
 
 async function load(){
   // ── 1. Exam definitions ──────────────────────────────────────────────────
@@ -1245,7 +1245,7 @@ function openPasteModal(){
 
 // ── Admin ─────────────────────────────────────────────────────────────────
 var ADMIN_PWD='awsquiz2025';
-function toggleAdmin(){if(S.adminMode){S.adminMode=false;render();return;}var pwd=prompt('Enter admin password:');if(pwd===ADMIN_PWD){S.adminMode=true;render();}else if(pwd!==null){alert('Wrong password.');}}
+function toggleAdmin(){if(S.adminMode){S.adminMode=false;try{localStorage.removeItem('quiz_admin_'+(USERID||''));}catch(e){}render();return;}var pwd=prompt('Enter admin password:');if(pwd===ADMIN_PWD){S.adminMode=true;try{localStorage.setItem('quiz_admin_'+(USERID||''),'1');}catch(e){}render();}else if(pwd!==null){alert('Wrong password.');}}
 function getQ(q){var c=S.corrections[q.id];if(!c)return q;return Object.assign({},q,c);}
 
 function openEditModal(qid){
@@ -1686,14 +1686,17 @@ async function switchExam(examId){
   setSS(false,'switching\u2026');
   if(!progressData.perExam)progressData.perExam={};
   if(ACTIVE_EXAM)progressData.perExam[ACTIVE_EXAM.id]={tries:S.tries,activeTry:S.activeTry,examAttempts:S.exams};
-  await dbsave();
+  // Switch ACTIVE_EXAM BEFORE dbsave so lastExamId is saved correctly
   ACTIVE_EXAM=examDefs.find(function(e){return e.id===examId;})||examDefs[0];
+  progressData.lastExamId=ACTIVE_EXAM.id;
   var ep=progressData.perExam&&progressData.perExam[ACTIVE_EXAM.id];
   S.tries=ep?ep.tries||[]:[];S.activeTry=ep?ep.activeTry||1:1;S.exams=ep?ep.examAttempts||[]:[];
   S.idx=0;S.activeCat='all';S.view='quiz';S.exam=null;rst();
   await loadExamContent(ACTIVE_EXAM.id);
   var td=getTD();S.idx=0;for(var i=0;i<QS.length;i++){if(!td.answers[QS[i].id]){S.idx=i;break;}}
-  updTryBtn();updateLogoEl();setSS(true,'synced \u2713');render();
+  updTryBtn();updateLogoEl();
+  await dbsave();
+  setSS(true,'synced \u2713');render();
 }
 function openManageExamsModal(){
   var ex=document.getElementById('manageExamsOv');if(ex)ex.remove();
