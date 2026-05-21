@@ -448,6 +448,7 @@ async function load(){
   ACTIVE_EXAM=_lastExam||examDefs[0];
   var ep=progressData.perExam&&progressData.perExam[ACTIVE_EXAM.id];
   if(ep){S.tries=ep.tries||[];S.activeTry=ep.activeTry||1;S.exams=ep.examAttempts||[];}
+  if(progressData.adminMode)S.adminMode=true;
   await loadExamContent(ACTIVE_EXAM.id);
 }
 
@@ -477,6 +478,7 @@ async function dbsave(){
   try{
     if(!progressData.perExam)progressData.perExam={};
     progressData.lastExamId=ACTIVE_EXAM?ACTIVE_EXAM.id:'default';
+    if(S.adminMode)progressData.adminMode=true;else delete progressData.adminMode;
     var eid=ACTIVE_EXAM?ACTIVE_EXAM.id:'default';
     progressData.perExam[eid]={tries:S.tries,activeTry:S.activeTry,examAttempts:S.exams};
     var r=await SB.from('quiz_progress').upsert({user_id:USERID,data:progressData,updated_at:new Date().toISOString()});
@@ -1015,7 +1017,7 @@ function rExamSetup(m){
         h+='<div class="set-row">';
         h+='<div style="flex:1"><div style="font-size:13px;font-weight:700">'+esc(set.name)+'</div>';
         h+='<div style="font-size:11px;color:var(--muted)">'+set.qids.length+' question'+(set.qids.length!==1?'s':'')+'</div></div>';
-        if(S.adminMode)h+='<button class="btn" style="font-size:11px;color:var(--err-txt);border-color:var(--err)" onclick="deleteExamSet(\''+set.id+'\')">&#128465;</button>';
+        if(S.adminMode){h+='<button class="btn" style="font-size:11px" onclick="openEditSetModal(\''+set.id+'\')">✎ Edit</button>';h+='<button class="btn" style="font-size:11px;color:var(--err-txt);border-color:var(--err)" onclick="deleteExamSet(\''+set.id+'\')">&#128465;</button>';}
         h+='<button class="btn-acc" onclick="_startSet(\'' + set.id + '\');">Start &#8594;</button>';
         h+='</div>';
       });
@@ -1051,7 +1053,7 @@ function rStats(m){
 }
 function rFocus(m){
   var mt=maxT(),h='<div class="h2">Question Focus Analysis</div>';
-  h+='<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px;align-items:center"><span style="font-size:12px;color:var(--muted)">Filter:</span><button class="btn'+(S.focusFilter==='all'?' btn-pri':'')+'" onclick="S.focusFilter=\'all\';render()">All</button><button class="btn'+(S.focusFilter==='wrong'?' btn-pri':'')+'" onclick="S.focusFilter=\'wrong\';render()">Ever Wrong</button><button class="btn'+(S.focusFilter==='unanswered'?' btn-pri':'')+'" onclick="S.focusFilter=\'unanswered\';render()">Unanswered</button><span style="margin-left:auto;font-size:12px;color:var(--muted)">Sort:</span><button class="btn'+(S.focusSort==='miss'?' btn-pri':'')+'" onclick="S.focusSort=\'miss\';render()">Most Missed</button><button class="btn'+(S.focusSort==='id'?' btn-pri':'')+'" onclick="S.focusSort=\'id\';render()">Q Number</button></div>';
+  h+='<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:6px;align-items:center"><span style="font-size:12px;font-weight:700;color:var(--muted);min-width:42px">Filter:</span><button class="btn'+(S.focusFilter==='all'?' btn-pri':'')+'" onclick="S.focusFilter=\'all\';render()">All</button><button class="btn'+(S.focusFilter==='wrong'?' btn-pri':'')+'" onclick="S.focusFilter=\'wrong\';render()">Ever Wrong</button><button class="btn'+(S.focusFilter==='unanswered'?' btn-pri':'')+'" onclick="S.focusFilter=\'unanswered\';render()">Unanswered</button></div><div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px;align-items:center"><span style="font-size:12px;font-weight:700;color:var(--muted);min-width:42px">Sort:</span><button class="btn'+(S.focusSort==='miss'?' btn-pri':'')+'" onclick="S.focusSort=\'miss\';render()">Most Missed</button><button class="btn'+(S.focusSort==='id'?' btn-pri':'')+'" onclick="S.focusSort=\'id\';render()">Q Number</button></div>';
   if(mt===0){m.innerHTML=h+'<div class="empty">No tries yet.</div>';return;}
   var qs2=QS.map(function(qq,qi){var cor=0,wr=0,sk=0,hist=[];for(var tn=1;tn<=mt;tn++){var t=S.tries.find(function(x){return x.tryNum===tn;}),a=t?t.answers[qq.id]:null;if(a==null){sk++;hist.push('s');}else if(isOK(qq,a)){cor++;hist.push('o');}else{wr++;hist.push('e');}}return{qq:qq,qi:qi,cor:cor,wr:wr,sk:sk,hist:hist,mr:wr/(cor+wr||1)};});
   var fl=qs2;if(S.focusFilter==='wrong')fl=qs2.filter(function(x){return x.wr>0;});if(S.focusFilter==='unanswered')fl=qs2.filter(function(x){return x.sk===mt;});if(S.focusSort==='miss')fl=fl.slice().sort(function(a,b){return b.wr-a.wr||b.mr-a.mr||a.qq.id-b.qq.id;});else fl=fl.slice().sort(function(a,b){return a.qq.id-b.qq.id;});
@@ -1102,18 +1104,32 @@ function rSync(m){
   if(S.categoryList&&S.categoryList.length){var h2cat=document.createElement('div');h2cat.className='h2';h2cat.style.marginTop='14px';h2cat.innerHTML='&#127991; Categories';root.appendChild(h2cat);var catCard=document.createElement('div');catCard.className='try-sec';var catGrid=document.createElement('div');catGrid.style.cssText='display:flex;flex-direction:column;gap:8px';S.categoryList.forEach(function(cat){var count=QS.filter(function(q){return hasCat(q.id,cat);}).length;var row=document.createElement('div');row.style.cssText='display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--surf2);border-radius:var(--rs);border:1px solid var(--bdr)';var nameSpan=document.createElement('span');nameSpan.style.cssText='flex:1;font-size:14px;font-weight:600';nameSpan.textContent=cat;var countSpan=document.createElement('span');countSpan.style.cssText='font-size:12px;color:var(--muted)';countSpan.textContent=count+' question'+(count!==1?'s':'');var studyBtn=document.createElement('button');studyBtn.className='btn btn-pri';studyBtn.style.fontSize='12px';studyBtn.innerHTML='&#128218; Study';studyBtn.onclick=(function(c){return function(){S.activeCat=c;var first=getFilteredQS()[0];if(first)S.idx=QS.findIndex(function(qq){return qq.id===first.id;});rst();setView('quiz');};})(cat);row.appendChild(nameSpan);row.appendChild(countSpan);row.appendChild(studyBtn);if(S.adminMode){var delBtn=document.createElement('button');delBtn.className='btn';delBtn.style.cssText='color:var(--err-txt);border-color:var(--err);font-size:12px';delBtn.innerHTML='&#128465;';delBtn.onclick=(function(c){return function(){if(confirm('Delete category "'+c+'"?'))deleteCat(c);};})(cat);row.appendChild(delBtn);}catGrid.appendChild(row);});catCard.appendChild(catGrid);root.appendChild(catCard);}
   var adminH2=document.createElement('div');adminH2.className='h2';adminH2.style.marginTop='14px';adminH2.innerHTML='&#128272; Admin';root.appendChild(adminH2);
   var adminCard=document.createElement('div');adminCard.className='try-sec';
-  var adminRow=document.createElement('div');adminRow.style.cssText='display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:'+(S.adminMode?'14px':'0');
-  var adminBtn=document.createElement('button');adminBtn.className='btn'+(S.adminMode?' btn-pri':'');adminBtn.innerHTML=S.adminMode?'&#128275; Admin mode ON \u2014 click to exit':'&#128272; Enable admin mode';adminBtn.onclick=toggleAdmin;adminRow.appendChild(adminBtn);
-  if(S.adminMode){var aNote=document.createElement('span');aNote.style.cssText='font-size:12px;color:var(--acc);font-weight:700';aNote.textContent='Edit/Delete/Tag buttons active on every question';adminRow.appendChild(aNote);var addQBtn=document.createElement('button');addQBtn.className='btn btn-pri';addQBtn.innerHTML='&#10010; Add Question';addQBtn.onclick=openAddQuestionModal;adminRow.appendChild(addQBtn);var mgrBtn=document.createElement('button');mgrBtn.className='btn';mgrBtn.innerHTML='&#127891; Manage Exams';mgrBtn.onclick=openManageExamsModal;adminRow.appendChild(mgrBtn);var migrateBtn=document.createElement('button');migrateBtn.className='btn';migrateBtn.innerHTML='&#128190; Push '+QS.length+' questions to DB';migrateBtn.onclick=function(){if(!confirm('Push all '+QS.length+' questions to DB?'))return;migrateBtn.disabled=true;migrateBtn.textContent='Saving\u2026';saveContent().then(function(ok){migrateBtn.textContent=ok?'\u2713 Pushed!':'\u26a0 Failed';migrateBtn.style.color=ok?'var(--ok-txt)':'var(--err-txt)';});};adminRow.appendChild(migrateBtn);}
+  var adminRow=document.createElement('div');adminRow.style.cssText='display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:10px';
+  var adminBtn=document.createElement('button');adminBtn.className='btn'+(S.adminMode?' btn-pri':'');adminBtn.innerHTML=S.adminMode?'&#128275; Admin mode ON — tap to exit':'&#128272; Enable admin mode';adminBtn.onclick=toggleAdmin;adminRow.appendChild(adminBtn);
+  if(S.adminMode){var aBadge=document.createElement('span');aBadge.style.cssText='font-size:11px;color:var(--ok-txt);background:var(--ok-bg);padding:3px 8px;border-radius:20px;border:1px solid var(--ok)';aBadge.textContent='✓ Active';adminRow.appendChild(aBadge);}
   adminCard.appendChild(adminRow);
   if(S.adminMode){
-    var sep=document.createElement('div');sep.style.cssText='border-top:1px solid var(--bdr);margin:12px 0';adminCard.appendChild(sep);
-    var qStatus=document.createElement('div');qStatus.style.cssText='background:var(--surf2);border-radius:var(--rs);padding:10px 13px;margin-bottom:14px;font-size:13px;display:flex;flex-direction:column;gap:4px';
-    qStatus.innerHTML='<span><strong>&#128218; Questions in DB:</strong> '+QS.length+'</span>'+(filled>0?'<span style="color:var(--ok-txt)">&#9989; '+filled+'/'+QS.length+' explanations loaded</span>':'<span style="color:var(--muted)">\u26a0\ufe0f No offline explanations</span>');
-    adminCard.appendChild(qStatus);
-    var btnRow=document.createElement('div');btnRow.style.cssText='display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px';var dlBtn=document.createElement('button');dlBtn.className='btn';dlBtn.innerHTML='\u2b07 Download JSON';dlBtn.onclick=exportJSON;var ulBtn=document.createElement('button');ulBtn.className='btn btn-pri';ulBtn.innerHTML='\u2b06 Upload JSON';ulBtn.onclick=triggerImport;var pasteBtn=document.createElement('button');pasteBtn.className='btn';pasteBtn.innerHTML='\u{1F4CB} Paste JSON';pasteBtn.onclick=openPasteModal;btnRow.appendChild(dlBtn);btnRow.appendChild(ulBtn);btnRow.appendChild(pasteBtn);adminCard.appendChild(btnRow);
+    var qGrpLbl=document.createElement('div');qGrpLbl.style.cssText='font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:5px';qGrpLbl.textContent='Questions';adminCard.appendChild(qGrpLbl);
+    var qGrp=document.createElement('div');qGrp.style.cssText='display:flex;gap:7px;flex-wrap:wrap;margin-bottom:14px';
+    var addQBtn=document.createElement('button');addQBtn.className='btn btn-pri';addQBtn.innerHTML='&#10010; Add Question';addQBtn.onclick=openAddQuestionModal;qGrp.appendChild(addQBtn);
+    var mgrBtn=document.createElement('button');mgrBtn.className='btn';mgrBtn.innerHTML='&#127891; Manage Exams';mgrBtn.onclick=openManageExamsModal;qGrp.appendChild(mgrBtn);
+    adminCard.appendChild(qGrp);
+  }
+  if(S.adminMode){
+    var dGrpLbl=document.createElement('div');dGrpLbl.style.cssText='font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:5px';dGrpLbl.textContent='Data';adminCard.appendChild(dGrpLbl);
+    var btnRow=document.createElement('div');btnRow.style.cssText='display:flex;gap:7px;flex-wrap:wrap;margin-bottom:8px';
+    var dlBtn=document.createElement('button');dlBtn.className='btn';dlBtn.innerHTML='⬇ Download';dlBtn.onclick=exportJSON;
+    var ulBtn=document.createElement('button');ulBtn.className='btn btn-pri';ulBtn.innerHTML='⬆ Upload JSON';ulBtn.onclick=triggerImport;
+    var pasteBtn=document.createElement('button');pasteBtn.className='btn';pasteBtn.innerHTML='📋 Paste JSON';pasteBtn.onclick=openPasteModal;
+    btnRow.appendChild(dlBtn);btnRow.appendChild(ulBtn);btnRow.appendChild(pasteBtn);adminCard.appendChild(btnRow);
     var fileInput=document.createElement('input');fileInput.type='file';fileInput.accept='.json';fileInput.style.display='none';fileInput.id='importFileInput';fileInput.onchange=function(){handleImportFile(this);};adminCard.appendChild(fileInput);
-    var importMsg=document.createElement('div');importMsg.id='importMsg';importMsg.style.cssText='font-size:13px;min-height:16px;margin-bottom:12px';adminCard.appendChild(importMsg);
+    var importMsg=document.createElement('div');importMsg.id='importMsg';importMsg.style.cssText='font-size:13px;min-height:16px;margin-bottom:8px';adminCard.appendChild(importMsg);
+    var qStatus=document.createElement('div');qStatus.style.cssText='font-size:12px;color:var(--muted);display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px;padding:8px 10px;background:var(--surf2);border-radius:var(--rs);border:1px solid var(--bdr)';
+    qStatus.innerHTML='<span>📚 <strong>'+QS.length+'</strong> questions</span>'+(filled>0?'<span style="color:var(--ok-txt)">✅ '+filled+'/'+QS.length+' explanations</span>':'<span>⚠ No explanations</span>');
+    var pushBtn=document.createElement('button');pushBtn.className='btn';pushBtn.style.cssText='font-size:11px;margin-left:auto';pushBtn.innerHTML='💾 Push to DB';
+    pushBtn.onclick=function(){if(!confirm('Push all '+QS.length+' questions to DB?'))return;pushBtn.disabled=true;pushBtn.textContent='Saving…';saveContent().then(function(ok){pushBtn.textContent=ok?'✓ Done!':'⚠ Failed';pushBtn.style.color=ok?'var(--ok-txt)':'var(--err-txt)';});};
+    qStatus.appendChild(pushBtn);adminCard.appendChild(qStatus);
+    var sep=document.createElement('div');sep.style.cssText='border-top:1px solid var(--bdr);margin:10px 0';adminCard.appendChild(sep);
     var IMPORT_PROMPT=buildAIPrompt(ACTIVE_EXAM);
 
     var fmtToggle=document.createElement('button');fmtToggle.className='link-btn';fmtToggle.style.fontSize='12px';fmtToggle.textContent='Show AI prompt & format guide \u25be';fmtToggle.onclick=function(){var ref=document.getElementById('jsonFmtRef');var open=ref.style.display!=='none';ref.style.display=open?'none':'block';fmtToggle.textContent=open?'Show AI prompt & format guide \u25be':'Hide AI prompt & format guide \u25b4';};adminCard.appendChild(fmtToggle);
@@ -1245,7 +1261,7 @@ function openPasteModal(){
 
 // ── Admin ─────────────────────────────────────────────────────────────────
 var ADMIN_PWD='awsquiz2025';
-function toggleAdmin(){if(S.adminMode){S.adminMode=false;try{localStorage.removeItem('quiz_admin_'+(USERID||''));}catch(e){}render();return;}var pwd=prompt('Enter admin password:');if(pwd===ADMIN_PWD){S.adminMode=true;try{localStorage.setItem('quiz_admin_'+(USERID||''),'1');}catch(e){}render();}else if(pwd!==null){alert('Wrong password.');}}
+function toggleAdmin(){if(S.adminMode){S.adminMode=false;try{localStorage.removeItem('quiz_admin_'+(USERID||''));}catch(e){}sched();render();return;}var pwd=prompt('Enter admin password:');if(pwd===ADMIN_PWD){S.adminMode=true;try{localStorage.setItem('quiz_admin_'+(USERID||''),'1');}catch(e){}sched();render();}else if(pwd!==null){alert('Wrong password.');}}
 function getQ(q){var c=S.corrections[q.id];if(!c)return q;return Object.assign({},q,c);}
 
 function openEditModal(qid){
@@ -1470,6 +1486,81 @@ function saveEditFull(qid,editQ,editExp,msgEl,overlay){
 }
 function saveEdit(qid){openEditModal(qid);} // legacy shim
 
+function openEditSetModal(setId){
+  var set=(ACTIVE_EXAM&&ACTIVE_EXAM.sets||[]).find(function(s){return s.id===setId;});
+  if(!set)return;
+  var ex=document.getElementById('createSetOv');if(ex)ex.remove();
+  var ov=document.createElement('div');ov.className='overlay';ov.id='createSetOv';ov.style.zIndex='100';
+  var modal=document.createElement('div');modal.className='modal';
+  modal.style.cssText='max-width:560px;max-height:86vh;display:flex;flex-direction:column;gap:0;padding:18px';
+  document.body.appendChild(ov);ov.appendChild(modal);
+  var selIds={};set.qids.forEach(function(id){selIds[id]=true;});
+  var viewMode='grid',filterStr='';
+  var titleEl=document.createElement('h2');titleEl.style.marginBottom='10px';titleEl.textContent='✎ Edit Set';modal.appendChild(titleEl);
+  var nameLbl=document.createElement('label');nameLbl.className='mlabel';nameLbl.textContent='Set name';modal.appendChild(nameLbl);
+  var nameInp=document.createElement('input');nameInp.className='minput';nameInp.value=set.name||'';nameInp.style.marginBottom='10px';modal.appendChild(nameInp);
+  var tb=document.createElement('div');tb.style.cssText='display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:7px';
+  var filterInp=document.createElement('input');filterInp.className='minput';filterInp.placeholder='Filter…';filterInp.style.cssText='flex:1;min-width:100px;margin-bottom:0';
+  filterInp.oninput=function(){filterStr=this.value;renderList();};tb.appendChild(filterInp);
+  var rangeFrom=document.createElement('input');rangeFrom.type='number';rangeFrom.placeholder='From #';rangeFrom.style.cssText='width:64px;border:1px solid var(--bdr2);border-radius:var(--rs);background:var(--surf2);color:var(--text);padding:6px 8px;font-size:13px;font-family:inherit';
+  var rangeTo=document.createElement('input');rangeTo.type='number';rangeTo.placeholder='To #';rangeTo.style.cssText='width:64px;border:1px solid var(--bdr2);border-radius:var(--rs);background:var(--surf2);color:var(--text);padding:6px 8px;font-size:13px;font-family:inherit';
+  tb.appendChild(rangeFrom);tb.appendChild(rangeTo);
+  var rangeBtn=document.createElement('button');rangeBtn.className='btn';rangeBtn.style.fontSize='11px';rangeBtn.textContent='Select range';
+  rangeBtn.onclick=function(){var from=parseInt(rangeFrom.value);var to=parseInt(rangeTo.value);QS.forEach(function(q){if((!isNaN(from)?q.id>=from:true)&&(!isNaN(to)?q.id<=to:true))selIds[q.id]=true;});updateVisuals();updateCount();};tb.appendChild(rangeBtn);
+  var selAllBtn=document.createElement('button');selAllBtn.className='btn';selAllBtn.style.fontSize='11px';selAllBtn.textContent='All visible';
+  selAllBtn.onclick=function(){var fl=filterStr.toLowerCase();var vis=QS.filter(function(q){return!fl||q.stem.toLowerCase().includes(fl)||String(q.id).includes(fl);});var allOn=vis.every(function(q){return selIds[q.id];});vis.forEach(function(q){selIds[q.id]=!allOn;});updateVisuals();updateCount();};tb.appendChild(selAllBtn);
+  var clearBtn=document.createElement('button');clearBtn.className='btn';clearBtn.style.fontSize='11px';clearBtn.textContent='Clear all';clearBtn.onclick=function(){selIds={};updateVisuals();updateCount();};tb.appendChild(clearBtn);
+  var viewBtn=document.createElement('button');viewBtn.className='btn';viewBtn.style.fontSize='11px';
+  function refreshViewBtn(){viewBtn.textContent=viewMode==='grid'?'≡ List':'⊞ Grid';}refreshViewBtn();
+  viewBtn.onclick=function(){viewMode=viewMode==='grid'?'list':'grid';refreshViewBtn();renderList();};tb.appendChild(viewBtn);
+  modal.appendChild(tb);
+  var countBar=document.createElement('div');countBar.style.cssText='font-size:12px;color:var(--muted);margin-bottom:6px';
+  function updateCount(){var n=Object.keys(selIds).filter(function(k){return selIds[k];}).length;countBar.innerHTML='<span style="color:var(--acc);font-weight:700">'+n+'</span> selected';}
+  updateCount();modal.appendChild(countBar);
+  var listWrap=document.createElement('div');listWrap.style.cssText='overflow-y:auto;flex:1;min-height:180px;border:1px solid var(--bdr);border-radius:var(--rs)';
+  function toggle(qid){selIds[qid]=!selIds[qid];listWrap.querySelectorAll('[data-qid="'+qid+'"]').forEach(function(el){applyVis(el,!!selIds[qid]);});updateCount();}
+  function applyVis(el,sel){if(el.classList.contains('gsq')){el.style.borderColor=sel?'var(--acc)':'var(--bdr2)';el.style.background=sel?'var(--acc-bg)':'var(--surf2)';el.style.color=sel?'var(--acc)':'var(--text)';el.style.fontWeight=sel?'800':'600';}else{var cb=el.querySelector('input[type=checkbox]');if(cb)cb.checked=sel;el.style.background=sel?'var(--acc-bg)':'';};}
+  function updateVisuals(){listWrap.querySelectorAll('[data-qid]').forEach(function(el){applyVis(el,!!selIds[parseInt(el.dataset.qid)]);});}
+  function renderList(){
+    listWrap.innerHTML='';var fl=filterStr.toLowerCase();
+    var vis=QS.filter(function(q){return!fl||q.stem.toLowerCase().includes(fl)||String(q.id).includes(fl);});
+    if(!vis.length){var em=document.createElement('div');em.style.cssText='padding:14px;font-size:13px;color:var(--muted)';em.textContent='No questions match.';listWrap.appendChild(em);return;}
+    if(viewMode==='grid'){
+      var grid=document.createElement('div');grid.style.cssText='display:flex;flex-wrap:wrap;gap:5px;padding:10px';
+      vis.forEach(function(q){var sq=document.createElement('div');sq.className='gsq';sq.dataset.qid=q.id;var sel=!!selIds[q.id];sq.style.cssText='width:40px;height:40px;border-radius:var(--rs);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:'+(sel?'800':'600')+';cursor:pointer;user-select:none;border:2px solid '+(sel?'var(--acc)':'var(--bdr2)')+';background:'+(sel?'var(--acc-bg)':'var(--surf2)')+';color:'+(sel?'var(--acc)':'var(--text)');sq.title='#'+q.id+': '+q.stem.slice(0,80);sq.textContent=q.id;sq.onclick=function(){toggle(q.id);};grid.appendChild(sq);});listWrap.appendChild(grid);
+    }else{
+      vis.forEach(function(q){var row=document.createElement('div');row.className='set-q-item';row.dataset.qid=q.id;var sel=!!selIds[q.id];if(sel)row.style.background='var(--acc-bg)';var cb=document.createElement('input');cb.type='checkbox';cb.checked=sel;cb.onchange=function(e){e.stopPropagation();selIds[q.id]=this.checked;applyVis(row,this.checked);updateCount();};var lbl=document.createElement('label');lbl.style.cssText='font-size:12px;line-height:1.45;cursor:pointer;flex:1;pointer-events:none';lbl.innerHTML=badge(q.type)+' <span style="color:var(--muted);font-size:11px">#'+q.id+'</span> '+esc(q.stem.slice(0,90))+(q.stem.length>90?'…':'');row.onclick=function(e){if(e.target===cb)return;selIds[q.id]=!selIds[q.id];cb.checked=selIds[q.id];applyVis(row,selIds[q.id]);updateCount();};row.appendChild(cb);row.appendChild(lbl);listWrap.appendChild(row);});
+    }
+  }
+  modal.appendChild(listWrap);
+  var shuffleRow=document.createElement('div');shuffleRow.style.cssText='display:flex;align-items:center;gap:8px;margin-top:8px';
+  var shuffleChk=document.createElement('input');shuffleChk.type='checkbox';shuffleChk.checked=set.shuffle!==false;shuffleChk.style.cssText='width:15px;height:15px;accent-color:var(--acc);cursor:pointer';
+  var shuffleLbl=document.createElement('label');shuffleLbl.style.cssText='font-size:13px;cursor:pointer';shuffleLbl.textContent='Shuffle question order';
+  shuffleRow.appendChild(shuffleChk);shuffleRow.appendChild(shuffleLbl);modal.appendChild(shuffleRow);
+  var msgEl=document.createElement('div');msgEl.style.cssText='font-size:12px;min-height:14px;margin-top:8px';modal.appendChild(msgEl);
+  var foot=document.createElement('div');foot.style.cssText='display:flex;gap:8px;margin-top:8px';
+  var saveBtn=document.createElement('button');saveBtn.className='btn-acc';saveBtn.style.flex='1';saveBtn.textContent='✓ Save Changes';
+  saveBtn.onclick=async function(){
+    var name=(nameInp.value||'').trim();
+    var qids=Object.keys(selIds).filter(function(k){return selIds[k];}).map(Number);
+    if(!name){msgEl.style.color='var(--err-txt)';msgEl.textContent='Enter a set name.';return;}
+    if(!qids.length){msgEl.style.color='var(--err-txt)';msgEl.textContent='Select at least one question.';return;}
+    var idx=(ACTIVE_EXAM.sets||[]).findIndex(function(s){return s.id===setId;});
+    if(idx<0)return;
+    ACTIVE_EXAM.sets[idx]=Object.assign({},set,{name:name,qids:qids,shuffle:shuffleChk.checked});
+    var eIdx=examDefs.findIndex(function(e){return e.id===ACTIVE_EXAM.id;});
+    if(eIdx>=0)examDefs[eIdx].sets=ACTIVE_EXAM.sets;
+    msgEl.style.color='var(--muted)';msgEl.textContent='Saving…';
+    try{
+      await SB.from('quiz_content').upsert([{key:'exam_defs',data:examDefs,updated_at:new Date().toISOString()}]);
+      msgEl.style.color='var(--ok-txt)';msgEl.textContent='✓ Saved!';
+      setTimeout(function(){ov.remove();render();},600);
+    }catch(e){msgEl.style.color='var(--err-txt)';msgEl.textContent='Save failed: '+e.message;}
+  };
+  var cancelBtn=document.createElement('button');cancelBtn.className='btn';cancelBtn.textContent='Cancel';cancelBtn.onclick=function(){ov.remove();};
+  foot.appendChild(saveBtn);foot.appendChild(cancelBtn);modal.appendChild(foot);
+  renderList();
+}
 // ── Custom Exam Sets ─────────────────────────────────────────────────────
 async function deleteExamSet(setId){
   if(!ACTIVE_EXAM||!confirm('Delete this custom set?'))return;
